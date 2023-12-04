@@ -1,6 +1,9 @@
-import { WalletClient, parseUnits } from "viem";
+import { PublicClient, WalletClient, getContract, parseUnits } from "viem";
 import { WBTC, WBTC_DECIMALS } from "./constants";
 import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
+import { getLeverageAddresses } from "./utils";
+import POSITION_OPENER_ABI from "./abis/PositionOpener.json";
+
 /**
  * Function to open a leveraged position
  * @param {string} amount - The amount to open with
@@ -9,55 +12,52 @@ import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
  * @returns {string} The transaction hash
  */
 export const openLeveragedPosition = async (
-  client: WalletClient,
+  publicClient: PublicClient,
+  walletClient: WalletClient,
   amount: string,
   amountToBorrow: string,
   assetOut: string,
   assetOutDecimals: number,
+  strategy: string,
+  account: `0x${string}`,
+  strategyAddress: string,
   slippagePercentage?: string
 ) => {
-  // TODO add leverageEngine contract
+  const leverageAddresses = await getLeverageAddresses();
 
   const payload = fetchUniswapRouteAndBuildPayload(
-    client,
+    walletClient,
     amount,
     WBTC,
     WBTC_DECIMALS,
     assetOut,
     assetOutDecimals
   );
-  //   const minimumAmount = await selectedStrategy.contract.read.previewDeposit([
-  //     toBigInt(`${0}`, 6),
-  //   ]);
-
-  //   console.log({
-  //     bigIntAmount,
-  //     bigIntAmountToBorrow,
-  //     selectedStrategyAddress: selectedStrategy.address,
-  //     minimumAmount,
-  //     payload,
-  //   });
-  //   const { request } = await leverageEngineContract.simulate.openPosition(
-  //     [
-  //       bigIntAmount,
-  //       bigIntAmountToBorrow,
-  //       selectedStrategy.address,
-  //       minimumAmount,
-  //       // We only have one route for now, so we send 0
-  //       0,
-  //       payload,
-  //       // This is address(0) for now
-  //       "0x0000000000000000000000000000000000000000",
-  //     ],
-  //     { account: address }
-  //   );
-  //   if (!request) return "No request found";
-  //   const hash = await walletClient.writeContract(request);
-  //   console.log({ request, hash });
-  //   if (!hash) return "No hash found";
-  //   const transactionReceipt = await publicClient.waitForTransactionReceipt({
-  //     hash,
-  //   });
-  //   console.log({ transactionReceipt });
-  //   if (!transactionReceipt) return "No transaction receipt";
+  const minimumAmount = parseUnits("0", assetOutDecimals); // TODO change it to fetch from strategy
+  const bigIntAmount = parseUnits(amount, WBTC_DECIMALS);
+  const bigIntAmountToBorrow = parseUnits(amountToBorrow, WBTC_DECIMALS);
+  const { request } = await publicClient.simulateContract({
+    address: leverageAddresses.positionOpener,
+    abi: POSITION_OPENER_ABI,
+    functionName: "openPosition",
+    args: [
+      bigIntAmount,
+      bigIntAmountToBorrow,
+      strategyAddress,
+      minimumAmount,
+      // We only have one route for now, so we send 0
+      0,
+      payload,
+      // This is address(0) for now
+      "0x0000000000000000000000000000000000000000",
+    ],
+    account,
+  });
+  if (!request) return "No request found";
+  const hash = await walletClient.writeContract(request);
+  if (!hash) return "No hash found";
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  });
+  if (!transactionReceipt) return "No transaction receipt";
 };
