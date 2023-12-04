@@ -1,7 +1,7 @@
 import { AlphaRouter } from "@uniswap/smart-order-router";
 import { CurrencyAmount, TradeType, Token } from "@uniswap/sdk-core";
 import { Protocol } from "@uniswap/router-sdk";
-import { parseUnits } from "viem";
+import { PublicClient, parseUnits } from "viem";
 import { Pool } from "@uniswap/v3-sdk";
 import { WalletClient, encodePacked, encodeAbiParameters } from "viem";
 import { providers } from "ethers";
@@ -9,7 +9,7 @@ import { providers } from "ethers";
  * Initializes the uniswap router instance
  * @returns {Object} The router instance
  */
-const initializeRouter = (client: WalletClient) => {
+const initializeRouter = (client: PublicClient) => {
   if (!client.chain?.rpcUrls?.default || !client.chain.id || !client.chain.name)
     throw new Error("Please setup the wallet");
   const network = {
@@ -35,7 +35,7 @@ const initializeRouter = (client: WalletClient) => {
  * @returns {Object} The uniswap route
  */
 export const fetchUniswapRouteAndBuildPayload = async (
-  client: WalletClient,
+  client: PublicClient,
   amount: string,
   inputToken: string,
   inputTokenDecimals: number,
@@ -131,4 +131,33 @@ const mapRouteData = (route: any) => {
   const tokenPath = route.route[0].route.tokenPath;
   const swapOutputAmount = route.trade.swaps[0].outputAmount.numerator[0] || 0;
   return { pools, tokenPath, swapOutputAmount };
+};
+
+export const getUniswapOutputAmount = async (
+  client: PublicClient,
+  amount: string,
+  inputToken: string,
+  inputTokenDecimals: number,
+  outputToken: string,
+  outputTokenDecimals: number
+) => {
+  const router = initializeRouter(client);
+  // Primary token always will be WBTC for now
+  const primaryAsset = new Token(1, inputToken, inputTokenDecimals);
+  // Secondary token will be the strategy underlying asset
+  const secondaryAsset = new Token(1, outputToken, outputTokenDecimals);
+  // We only use V3 protocol for now
+  const protocols = ["V3"] as Protocol[];
+  if (!primaryAsset || !secondaryAsset) return "Please enter a valid asset";
+  const amountBN = parseUnits(amount, inputTokenDecimals).toString();
+  // We retrieve the route from the uniswap router
+  const route: any = await router.route(
+    CurrencyAmount.fromRawAmount(primaryAsset, amountBN),
+    secondaryAsset,
+    TradeType.EXACT_INPUT,
+    undefined,
+    { protocols }
+  );
+  const { pools, tokenPath, swapOutputAmount } = mapRouteData(route);
+  return swapOutputAmount;
 };

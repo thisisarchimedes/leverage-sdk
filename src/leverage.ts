@@ -1,6 +1,9 @@
 import { PublicClient, WalletClient, getContract, parseUnits } from "viem";
 import { WBTC, WBTC_DECIMALS } from "./constants";
-import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
+import {
+  fetchUniswapRouteAndBuildPayload,
+  getUniswapOutputAmount,
+} from "./uniswap";
 import { getLeverageAddresses } from "./utils";
 import POSITION_OPENER_ABI from "./abis/PositionOpener.json";
 
@@ -26,7 +29,7 @@ export const openLeveragedPosition = async (
   const leverageAddresses = await getLeverageAddresses();
 
   const payload = fetchUniswapRouteAndBuildPayload(
-    walletClient,
+    publicClient,
     amount,
     WBTC,
     WBTC_DECIMALS,
@@ -60,4 +63,36 @@ export const openLeveragedPosition = async (
     hash,
   });
   if (!transactionReceipt) return "No transaction receipt";
+};
+
+export const previewOpenPosition = async (
+  publicClient: PublicClient,
+  amount: string,
+  amountToBorrow: string,
+  assetOut: string,
+  assetOutDecimals: number,
+  strategyAddress: string,
+  slippagePercentage?: string
+) => {
+  const swapOutputAmount = await getUniswapOutputAmount(
+    publicClient,
+    amount,
+    WBTC,
+    WBTC_DECIMALS,
+    assetOut,
+    assetOutDecimals
+  );
+  const leverageAddresses = await getLeverageAddresses();
+  const minimumExpectedShares = publicClient.readContract({
+    address: leverageAddresses.positionOpener,
+    abi: POSITION_OPENER_ABI,
+    functionName: "previewOpenPosition",
+    args: [
+      parseUnits(amount, WBTC_DECIMALS),
+      parseUnits(amountToBorrow, WBTC_DECIMALS),
+      strategyAddress,
+      swapOutputAmount,
+    ],
+  });
+  return minimumExpectedShares;
 };
