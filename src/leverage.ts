@@ -113,14 +113,21 @@ export const closeLeveragedPosition = async (
   walletClient: WalletClient,
   nftId: string,
   minWBTC: string,
-  account: `0x${string}`
+  account: `0x${string}`,
+  payload: string
 ) => {
   const leverageAddresses = await getLeverageAddresses();
   const { request } = await publicClient.simulateContract({
     address: leverageAddresses.positionCloser,
     abi: POSITION_CLOSER_ABI,
     functionName: "closePosition",
-    args: [nftId, parseUnits(minWBTC, WBTC_DECIMALS)],
+    args: [
+      nftId,
+      parseUnits(minWBTC, WBTC_DECIMALS),
+      0,
+      payload,
+      "0x0000000000000000000000000000000000000000",
+    ],
     account,
   });
   if (!request) return "No request found";
@@ -170,5 +177,13 @@ export const previewClosePosition = async (
     WBTC_DECIMALS
   ); // TODO add slippage
   // TODO add exit fee calculation
-  return minimumWBTC;
+  const payload = fetchUniswapRouteAndBuildPayload(
+    publicClient,
+    formatUnits(minimumExpectedAssets, assetDecimals),
+    strategyAsset,
+    assetDecimals,
+    WBTC,
+    WBTC_DECIMALS
+  );
+  return { minimumWBTC, payload };
 };
