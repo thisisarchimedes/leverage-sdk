@@ -66,7 +66,7 @@ export const fetchUniswapRouteAndBuildPayload = async (
       tokenPath
     );
     const encodedPath = encodePacked(dataTypes, dataValues);
-    const deadline = BigInt(131241242); // TODO change it
+    const deadline = BigInt(1703958765); // TODO change it
     const payload = encodeAbiParameters(
       [
         {
@@ -129,7 +129,7 @@ const mapRouteData = (route: any) => {
   if (!route) throw new Error("Please enter a valid route");
   const pools = route.route[0].route.pools;
   const tokenPath = route.route[0].route.tokenPath;
-  const swapOutputAmount = route.trade.swaps[0].outputAmount.numerator[0] || 0;
+  const swapOutputAmount = route.quote.toExact() || 0;
   return { pools, tokenPath, swapOutputAmount };
 };
 
@@ -160,7 +160,7 @@ export const getUniswapOutputAmount = async (
       { protocols }
     );
     const { pools, tokenPath, swapOutputAmount } = mapRouteData(route);
-    return swapOutputAmount;
+    return parseUnits(swapOutputAmount, outputTokenDecimals);
   } catch (err) {
     console.log("getUniswapOutputAmount err: ", err);
     throw err;

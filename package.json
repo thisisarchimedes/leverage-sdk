@@ -19,6 +19,7 @@
     "@uniswap/smart-order-router": "^3.19.2",
     "@uniswap/v3-sdk": "^3.10.0",
     "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
     "ethers": "5.7.2",
     "viem": "^1.19.11"
   }

@@ -1,5 +1,7 @@
 import { createWalletClient, createPublicClient, http, Chain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import dotenv from "dotenv";
+dotenv.config();
 const tenderlyChain: Chain = {
   id: 1337,
   network: "tenderly-fork",
@@ -23,7 +25,7 @@ const tenderlyChain: Chain = {
   },
 };
 const account = privateKeyToAccount(
-  "0xc29daa5cf3a2a7e7585254386235a969f289b4ef65b40045eb66d37e34bfe0dd"
+  (process.env.PRIVATE_KEY as `0x${string}`) || "0x00"
 );
 export const walletClient = createWalletClient({
   account,

@@ -38,10 +38,10 @@ export const openLeveragedPosition = async (
     await getOutputAssetFromStrategy(publicClient, strategyAddress);
 
   const leverageAddresses = await getLeverageAddresses();
-
-  const payload = fetchUniswapRouteAndBuildPayload(
+  const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
+  const payload = await fetchUniswapRouteAndBuildPayload(
     publicClient,
-    amount,
+    totalAmount,
     WBTC,
     WBTC_DECIMALS,
     assetOut,
@@ -50,9 +50,12 @@ export const openLeveragedPosition = async (
   const minimumAmount = parseUnits(minimumStrategyShares, assetOutDecimals);
   const bigIntAmount = parseUnits(amount, WBTC_DECIMALS);
   const bigIntAmountToBorrow = parseUnits(amountToBorrow, WBTC_DECIMALS);
+  const positionOpener = leverageAddresses.find(
+    (item: any) => item.name === "PositionOpener"
+  );
   const { request, result } = await publicClient.simulateContract({
-    address: leverageAddresses.positionOpener,
-    abi: POSITION_OPENER_ABI,
+    address: positionOpener.address,
+    abi: positionOpener.abi,
     functionName: "openPosition",
     args: [
       bigIntAmount,
@@ -89,29 +92,24 @@ export const previewOpenPosition = async (
 ) => {
   const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
     await getOutputAssetFromStrategy(publicClient, strategyAddress);
-
+  const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
   const swapOutputAmount = await getUniswapOutputAmount(
     publicClient,
-    amount + amountToBorrow,
+    totalAmount,
     WBTC,
     WBTC_DECIMALS,
     assetOut,
     assetOutDecimals
   );
-
   // TODO add slippage percentage
-  const leverageAddresses = await getLeverageAddresses();
-  const positionOpener = leverageAddresses.find(
-    (item: any) => item.name === "PositionOpener"
-  );
 
-  const minimumExpectedShares = await publicClient.readContract({
+  const minimumExpectedShares: bigint = (await publicClient.readContract({
     address: strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
     functionName: "previewDeposit",
     args: [swapOutputAmount],
-  });
-  return minimumExpectedShares;
+  })) as bigint;
+  return formatUnits(minimumExpectedShares, assetOutDecimals);
 };
 
 export const closeLeveragedPosition = async (
