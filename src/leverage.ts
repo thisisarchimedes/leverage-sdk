@@ -32,9 +32,8 @@ export const openLeveragedPosition = async (
   amountToBorrow: string,
   assetOut: string,
   assetOutDecimals: number,
-  strategy: string,
-  account: `0x${string}`,
   strategyAddress: string,
+  account: `0x${string}`,
   slippagePercentage?: string
 ) => {
   const leverageAddresses = await getLeverageAddresses();
