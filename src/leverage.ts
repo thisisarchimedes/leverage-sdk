@@ -30,12 +30,13 @@ export const openLeveragedPosition = async (
   walletClient: WalletClient,
   amount: string,
   amountToBorrow: string,
-  assetOut: string,
-  assetOutDecimals: number,
-  strategyAddress: string,
-  account: `0x${string}`,
-  slippagePercentage?: string
+  minimumStrategyShares: string,
+  strategyAddress: `0x${string}`,
+  account: `0x${string}`
 ) => {
+  const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
+    await getOutputAssetFromStrategy(publicClient, strategyAddress);
+
   const leverageAddresses = await getLeverageAddresses();
 
   const payload = fetchUniswapRouteAndBuildPayload(
@@ -45,11 +46,11 @@ export const openLeveragedPosition = async (
     WBTC_DECIMALS,
     assetOut,
     assetOutDecimals
-  ); // TODO add slippage percentage
-  const minimumAmount = parseUnits("0", assetOutDecimals); // TODO change it to fetch from strategy
+  );
+  const minimumAmount = parseUnits(minimumStrategyShares, assetOutDecimals);
   const bigIntAmount = parseUnits(amount, WBTC_DECIMALS);
   const bigIntAmountToBorrow = parseUnits(amountToBorrow, WBTC_DECIMALS);
-  const { request } = await publicClient.simulateContract({
+  const { request, result } = await publicClient.simulateContract({
     address: leverageAddresses.positionOpener,
     abi: POSITION_OPENER_ABI,
     functionName: "openPosition",
@@ -73,36 +74,42 @@ export const openLeveragedPosition = async (
     hash,
   });
   if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
 };
 
 export const previewOpenPosition = async (
   publicClient: PublicClient,
   amount: string,
   amountToBorrow: string,
-  assetOut: string,
-  assetOutDecimals: number,
-  strategyAddress: string,
+  strategyAddress: `0x${string}`,
   slippagePercentage?: string
 ) => {
+  const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
+    await getOutputAssetFromStrategy(publicClient, strategyAddress);
+
   const swapOutputAmount = await getUniswapOutputAmount(
     publicClient,
-    amount,
+    amount + amountToBorrow,
     WBTC,
     WBTC_DECIMALS,
     assetOut,
     assetOutDecimals
-  ); // TODO add slippage percentage
+  );
+
+  // TODO add slippage percentage
   const leverageAddresses = await getLeverageAddresses();
+  const positionOpener = leverageAddresses.find(
+    (item: any) => item.name === "PositionOpener"
+  );
+
   const minimumExpectedShares = await publicClient.readContract({
-    address: leverageAddresses.positionOpener,
-    abi: POSITION_OPENER_ABI,
-    functionName: "previewOpenPosition",
-    args: [
-      parseUnits(amount, WBTC_DECIMALS),
-      parseUnits(amountToBorrow, WBTC_DECIMALS),
-      strategyAddress,
-      swapOutputAmount,
-    ],
+    address: strategyAddress,
+    abi: MULTIPOOL_STRATEGY_ABI,
+    functionName: "previewDeposit",
+    args: [swapOutputAmount],
   });
   return minimumExpectedShares;
 };
@@ -116,7 +123,7 @@ export const closeLeveragedPosition = async (
   payload: string
 ) => {
   const leverageAddresses = await getLeverageAddresses();
-  const { request } = await publicClient.simulateContract({
+  const { request, result } = await publicClient.simulateContract({
     address: leverageAddresses.positionCloser,
     abi: POSITION_CLOSER_ABI,
     functionName: "closePosition",
@@ -136,6 +143,10 @@ export const closeLeveragedPosition = async (
     hash,
   });
   if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
 };
 
 export const previewClosePosition = async (
@@ -174,7 +185,8 @@ export const previewClosePosition = async (
     assetDecimals,
     WBTC,
     WBTC_DECIMALS
-  ); // TODO add slippage
+  );
+  // TODO add slippage
   // TODO add exit fee calculation
   const payload = fetchUniswapRouteAndBuildPayload(
     publicClient,
@@ -185,4 +197,21 @@ export const previewClosePosition = async (
     WBTC_DECIMALS
   );
   return { minimumWBTC, payload };
+};
+
+const getOutputAssetFromStrategy = async (
+  publicClient: PublicClient,
+  strategyAddress: `0x${string}`
+) => {
+  const strategyAsset = (await publicClient.readContract({
+    address: strategyAddress,
+    abi: MULTIPOOL_STRATEGY_ABI,
+    functionName: "asset",
+  })) as `0x${string}`;
+  const assetDecimals = (await publicClient.readContract({
+    address: strategyAsset,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+  })) as number;
+  return { strategyAsset, assetDecimals };
 };

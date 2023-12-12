@@ -141,23 +141,28 @@ export const getUniswapOutputAmount = async (
   outputToken: string,
   outputTokenDecimals: number
 ) => {
-  const router = initializeRouter(client);
-  // Primary token always will be WBTC for now
-  const primaryAsset = new Token(1, inputToken, inputTokenDecimals);
-  // Secondary token will be the strategy underlying asset
-  const secondaryAsset = new Token(1, outputToken, outputTokenDecimals);
-  // We only use V3 protocol for now
-  const protocols = ["V3"] as Protocol[];
-  if (!primaryAsset || !secondaryAsset) return "Please enter a valid asset";
-  const amountBN = parseUnits(amount, inputTokenDecimals).toString();
-  // We retrieve the route from the uniswap router
-  const route: any = await router.route(
-    CurrencyAmount.fromRawAmount(primaryAsset, amountBN),
-    secondaryAsset,
-    TradeType.EXACT_INPUT,
-    undefined,
-    { protocols }
-  );
-  const { pools, tokenPath, swapOutputAmount } = mapRouteData(route);
-  return swapOutputAmount;
+  try {
+    const router = initializeRouter(client);
+    // Primary token always will be WBTC for now
+    const primaryAsset = new Token(1, inputToken, inputTokenDecimals);
+    // Secondary token will be the strategy underlying asset
+    const secondaryAsset = new Token(1, outputToken, outputTokenDecimals);
+    // We only use V3 protocol for now
+    const protocols = ["V3"] as Protocol[];
+    if (!primaryAsset || !secondaryAsset) return "Please enter a valid asset";
+    const amountBN = parseUnits(amount, inputTokenDecimals).toString();
+    // We retrieve the route from the uniswap router
+    const route: any = await router.route(
+      CurrencyAmount.fromRawAmount(primaryAsset, amountBN),
+      secondaryAsset,
+      TradeType.EXACT_INPUT,
+      undefined,
+      { protocols }
+    );
+    const { pools, tokenPath, swapOutputAmount } = mapRouteData(route);
+    return swapOutputAmount;
+  } catch (err) {
+    console.log("getUniswapOutputAmount err: ", err);
+    throw err;
+  }
 };
