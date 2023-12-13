@@ -61,8 +61,7 @@ export const fetchUniswapRouteAndBuildPayload = async (
       { protocols }
     );
     const { pools, tokenPath, swapOutputAmount } = mapRouteData(route);
-    console.log("pools", pools);
-    console.log("tokenPath", tokenPath);
+
     const { dataTypes, dataValues } = buildPathFromUniswapRouteData(
       pools,
       tokenPath

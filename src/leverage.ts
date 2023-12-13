@@ -39,8 +39,9 @@ export const openLeveragedPosition = async (
 ) => {
   const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
     await getOutputAssetFromStrategy(publicClient, strategyAddress);
-
-  const leverageAddresses = await getLeverageAddresses();
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
 
   const minimumStrategySharesBN = parseUnits(
     minimumStrategyShares,
@@ -120,7 +121,9 @@ export const closeLeveragedPosition = async (
   account: `0x${string}`,
   payload: string
 ) => {
-  const leverageAddresses = await getLeverageAddresses();
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
   const { request, result } = await publicClient.simulateContract({
     address: leverageAddresses.positionCloser,
     abi: POSITION_CLOSER_ABI,
@@ -151,7 +154,9 @@ export const previewClosePosition = async (
   publicClient: PublicClient,
   nftId: string
 ) => {
-  const leverageAddresses = await getLeverageAddresses();
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
   const positionData: LedgerEntry = (await publicClient.readContract({
     address: leverageAddresses.positionLedger,
     abi: POSITION_LEDGER_ABI,
@@ -214,7 +219,9 @@ export const approveWBTCForPositionOpener = async (
   account: `0x${string}`,
   amount: string
 ) => {
-  const leverageAddresses = await getLeverageAddresses();
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
   const positionOpener = leverageAddresses.find(
     (item: any) => item.name === "PositionOpener"
   );
