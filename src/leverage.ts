@@ -6,12 +6,9 @@ import {
   parseUnits,
 } from "viem";
 import { WBTC, WBTC_DECIMALS } from "./constants";
-import {
-  fetchUniswapRouteAndBuildPayload,
-  getUniswapOutputAmount,
-} from "./uniswap";
+import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
 import { getLeverageAddresses } from "./utils";
-import POSITION_OPENER_ABI from "./abis/PositionOpener.json";
+
 import POSITION_CLOSER_ABI from "./abis/PositionCloser.json";
 import POSITION_LEDGER_ABI from "./abis/PositionLedger.json";
 import MULTIPOOL_STRATEGY_ABI from "./abis/MultipoolStrategy.json";
@@ -20,10 +17,15 @@ import { LedgerEntry } from "./types";
 
 /**
  * Function to open a leveraged position
+ * @param {Object} publicClient - The public client instance
+ * @param {Object} walletClient - The wallet client instance
  * @param {string} amount - The amount to open with
  * @param {string} amountToBorrow - The amount to borrow
- * @param {string} asset - The asset to swap to
- * @returns {string} The transaction hash
+ * @param {string} minimumStrategyShares - The minimum strategy shares
+ * @param {string} strategyAddress - The strategy address
+ * @param {string} payload - The swap payload
+ * @param {string} account - The account address
+ * @returns {Object} The result and transaction receipt
  */
 export const openLeveragedPosition = async (
   publicClient: PublicClient,
@@ -32,42 +34,37 @@ export const openLeveragedPosition = async (
   amountToBorrow: string,
   minimumStrategyShares: string,
   strategyAddress: `0x${string}`,
+  payload: string,
   account: `0x${string}`
 ) => {
   const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
     await getOutputAssetFromStrategy(publicClient, strategyAddress);
 
   const leverageAddresses = await getLeverageAddresses();
-  const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
-  const payload = await fetchUniswapRouteAndBuildPayload(
-    publicClient,
-    totalAmount,
-    WBTC,
-    WBTC_DECIMALS,
-    assetOut,
+
+  const minimumStrategySharesBN = parseUnits(
+    minimumStrategyShares,
     assetOutDecimals
   );
-  const minimumAmount = parseUnits(minimumStrategyShares, assetOutDecimals);
-  const bigIntAmount = parseUnits(amount, WBTC_DECIMALS);
-  const bigIntAmountToBorrow = parseUnits(amountToBorrow, WBTC_DECIMALS);
+  const amountBN = parseUnits(amount, WBTC_DECIMALS);
+  const amountToBorrowBN = parseUnits(amountToBorrow, WBTC_DECIMALS);
   const positionOpener = leverageAddresses.find(
     (item: any) => item.name === "PositionOpener"
   );
+  const openPositionStruct = {
+    collateralAmount: amountBN,
+    wbtcToBorrow: amountToBorrowBN,
+    strategy: strategyAddress,
+    minStrategyShares: minimumStrategySharesBN,
+    swapRoute: "0",
+    swapData: payload,
+    exchange: "0x0000000000000000000000000000000000000000",
+  };
   const { request, result } = await publicClient.simulateContract({
     address: positionOpener.address,
     abi: positionOpener.abi,
     functionName: "openPosition",
-    args: [
-      bigIntAmount,
-      bigIntAmountToBorrow,
-      strategyAddress,
-      minimumAmount,
-      // We only have one route for now, so we send 0
-      0,
-      payload,
-      // This is address(0) for now
-      "0x0000000000000000000000000000000000000000",
-    ],
+    args: [openPositionStruct],
     account,
   });
   if (!request) return "No request found";
@@ -93,7 +90,7 @@ export const previewOpenPosition = async (
   const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
     await getOutputAssetFromStrategy(publicClient, strategyAddress);
   const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
-  const swapOutputAmount = await getUniswapOutputAmount(
+  const { payload, swapOutputAmount } = await fetchUniswapRouteAndBuildPayload(
     publicClient,
     totalAmount,
     WBTC,
@@ -102,14 +99,17 @@ export const previewOpenPosition = async (
     assetOutDecimals
   );
   // TODO add slippage percentage
-
+  const swapOutputAmountBN = parseUnits(swapOutputAmount, assetOutDecimals);
   const minimumExpectedShares: bigint = (await publicClient.readContract({
     address: strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
     functionName: "previewDeposit",
-    args: [swapOutputAmount],
+    args: [swapOutputAmountBN],
   })) as bigint;
-  return formatUnits(minimumExpectedShares, assetOutDecimals);
+  return {
+    minimumExpectedShares: formatUnits(minimumExpectedShares, assetOutDecimals),
+    payload: payload,
+  };
 };
 
 export const closeLeveragedPosition = async (
@@ -176,24 +176,18 @@ export const previewClosePosition = async (
     functionName: "decimals",
   })) as number;
   formatUnits;
-  const minimumWBTC = await getUniswapOutputAmount(
-    publicClient,
-    formatUnits(minimumExpectedAssets, assetDecimals),
-    strategyAsset,
-    assetDecimals,
-    WBTC,
-    WBTC_DECIMALS
-  );
+
   // TODO add slippage
   // TODO add exit fee calculation
-  const payload = fetchUniswapRouteAndBuildPayload(
-    publicClient,
-    formatUnits(minimumExpectedAssets, assetDecimals),
-    strategyAsset,
-    assetDecimals,
-    WBTC,
-    WBTC_DECIMALS
-  );
+  const { payload, swapOutputAmount: minimumWBTC } =
+    await fetchUniswapRouteAndBuildPayload(
+      publicClient,
+      formatUnits(minimumExpectedAssets, assetDecimals),
+      strategyAsset,
+      assetDecimals,
+      WBTC,
+      WBTC_DECIMALS
+    );
   return { minimumWBTC, payload };
 };
 
@@ -212,4 +206,35 @@ const getOutputAssetFromStrategy = async (
     functionName: "decimals",
   })) as number;
   return { strategyAsset, assetDecimals };
+};
+
+export const approveWBTCForPositionOpener = async (
+  publicClient: PublicClient,
+  walletClient: WalletClient,
+  account: `0x${string}`,
+  amount: string
+) => {
+  const leverageAddresses = await getLeverageAddresses();
+  const positionOpener = leverageAddresses.find(
+    (item: any) => item.name === "PositionOpener"
+  );
+  const amountBN = parseUnits(amount, WBTC_DECIMALS);
+  const { request, result } = await publicClient.simulateContract({
+    address: WBTC,
+    abi: ERC20_ABI,
+    functionName: "approve",
+    args: [positionOpener.address, amountBN],
+    account,
+  });
+  if (!request) return "No request found";
+  const hash = await walletClient.writeContract(request);
+  if (!hash) return "No hash found";
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  });
+  if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
 };
