@@ -13,7 +13,7 @@ import POSITION_CLOSER_ABI from "./abis/PositionCloser.json";
 import POSITION_LEDGER_ABI from "./abis/PositionLedger.json";
 import MULTIPOOL_STRATEGY_ABI from "./abis/MultipoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
-import { LedgerEntry } from "./types";
+import { ClosePositionParams, LedgerEntry } from "./types";
 
 /**
  * Function to open a leveraged position
@@ -124,17 +124,21 @@ export const closeLeveragedPosition = async (
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
   const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const closePositionStruct: ClosePositionParams = {
+    nftId: nftId,
+    minWBTC: parseUnits(minWBTC, WBTC_DECIMALS),
+    swapRoute: "0",
+    swapData: payload,
+    exchange: "0x0000000000000000000000000000000000000000",
+  };
+  const positionCloser = leverageAddresses.find(
+    (item: any) => item.name === "PositionCloser"
+  );
   const { request, result } = await publicClient.simulateContract({
-    address: leverageAddresses.positionCloser,
-    abi: POSITION_CLOSER_ABI,
+    address: positionCloser.address,
+    abi: positionCloser.abi,
     functionName: "closePosition",
-    args: [
-      nftId,
-      parseUnits(minWBTC, WBTC_DECIMALS),
-      0,
-      payload,
-      "0x0000000000000000000000000000000000000000",
-    ],
+    args: [closePositionStruct],
     account,
   });
   if (!request) return "No request found";
@@ -157,12 +161,15 @@ export const previewClosePosition = async (
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
   const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const positionLedger = leverageAddresses.find(
+    (item: any) => item.name === "PositionLedger"
+  );
   const positionData: LedgerEntry = (await publicClient.readContract({
-    address: leverageAddresses.positionLedger,
-    abi: POSITION_LEDGER_ABI,
+    address: positionLedger.address,
+    abi: positionLedger.abi,
     functionName: "getPosition",
     args: [nftId],
-  })) as LedgerEntry;
+  })) as unknown as LedgerEntry;
   const minimumExpectedAssets = (await publicClient.readContract({
     address: positionData.strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
@@ -180,7 +187,6 @@ export const previewClosePosition = async (
     abi: ERC20_ABI,
     functionName: "decimals",
   })) as number;
-  formatUnits;
 
   // TODO add slippage
   // TODO add exit fee calculation
