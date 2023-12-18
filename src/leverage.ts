@@ -1,16 +1,7 @@
-import {
-  PublicClient,
-  WalletClient,
-  formatUnits,
-  getContract,
-  parseUnits,
-} from "viem";
+import { PublicClient, WalletClient, formatUnits, parseUnits } from "viem";
 import { WBTC, WBTC_DECIMALS } from "./constants";
 import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
 import { getLeverageAddresses } from "./utils";
-
-import POSITION_CLOSER_ABI from "./abis/PositionCloser.json";
-import POSITION_LEDGER_ABI from "./abis/PositionLedger.json";
 import MULTIPOOL_STRATEGY_ABI from "./abis/MultipoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
 import { ClosePositionParams, LedgerEntry } from "./types";
@@ -52,6 +43,7 @@ export const openLeveragedPosition = async (
   const positionOpener = leverageAddresses.find(
     (item: any) => item.name === "PositionOpener"
   );
+  if (!positionOpener) throw new Error("No position opener found");
   const openPositionStruct = {
     collateralAmount: amountBN,
     wbtcToBorrow: amountToBorrowBN,
@@ -81,6 +73,15 @@ export const openLeveragedPosition = async (
   };
 };
 
+/**
+ * Preview the open position
+ * @param publicClient Viem public client instance
+ * @param amount WBTC amount to open with
+ * @param amountToBorrow WBTC amount to borrow
+ * @param strategyAddress Underlying strategy address
+ * @param slippagePercentage Slippage percentage
+ * @returns The minimum expected shares and the swap payload
+ */
 export const previewOpenPosition = async (
   publicClient: PublicClient,
   amount: string,
@@ -113,6 +114,16 @@ export const previewOpenPosition = async (
   };
 };
 
+/**
+ * Function to close a leveraged position
+ * @param {PublicClient} publicClient Viem public client instance
+ * @param {WalletClient} walletClient Viem wallet client instance
+ * @param {string} nftId nftId of the position
+ * @param {string} minWBTC minWBTC to receive
+ * @param {`0x${string}`} account wallet address of the user
+ * @param {string} payload payload for the swap from the strategy asset to WBTC
+ * @returns result and transaction receipt
+ */
 export const closeLeveragedPosition = async (
   publicClient: PublicClient,
   walletClient: WalletClient,
@@ -134,6 +145,7 @@ export const closeLeveragedPosition = async (
   const positionCloser = leverageAddresses.find(
     (item: any) => item.name === "PositionCloser"
   );
+  if (!positionCloser) throw new Error("No position closer found");
   const { request, result } = await publicClient.simulateContract({
     address: positionCloser.address,
     abi: positionCloser.abi,
@@ -154,6 +166,12 @@ export const closeLeveragedPosition = async (
   };
 };
 
+/**
+ * Preview the close position
+ * @param {PublicClient} publicClient Viem public client instance
+ * @param {string} nftId nftId of the position
+ * @returns minimumWBTC and payload for the swap from the strategy asset to WBTC
+ */
 export const previewClosePosition = async (
   publicClient: PublicClient,
   nftId: string
@@ -164,6 +182,7 @@ export const previewClosePosition = async (
   const positionLedger = leverageAddresses.find(
     (item: any) => item.name === "PositionLedger"
   );
+  if (!positionLedger) throw new Error("No position ledger found");
   const positionData: LedgerEntry = (await publicClient.readContract({
     address: positionLedger.address,
     abi: positionLedger.abi,
@@ -219,6 +238,14 @@ const getOutputAssetFromStrategy = async (
   return { strategyAsset, assetDecimals };
 };
 
+/**
+ * Function to approve WBTC for the position opener
+ * @param {PublicClient} publicClient Viem public client instance
+ * @param {WalletClient} walletClient Viem wallet client instance
+ * @param {`0x${string}`} account wallet address of the user
+ * @param {string} amount amount to approve
+ * @returns {Object} result and transaction receipt
+ */
 export const approveWBTCForPositionOpener = async (
   publicClient: PublicClient,
   walletClient: WalletClient,
@@ -232,6 +259,7 @@ export const approveWBTCForPositionOpener = async (
     (item: any) => item.name === "PositionOpener"
   );
   const amountBN = parseUnits(amount, WBTC_DECIMALS);
+  if (!positionOpener) throw new Error("No position opener found");
   const { request, result } = await publicClient.simulateContract({
     address: WBTC,
     abi: ERC20_ABI,
