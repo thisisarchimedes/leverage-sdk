@@ -79,7 +79,7 @@ export const openLeveragedPosition = async (
  * @param amount WBTC amount to open with
  * @param amountToBorrow WBTC amount to borrow
  * @param strategyAddress Underlying strategy address
- * @param slippagePercentage Slippage percentage
+ * @param slippagePercentage Slippage percentage in 10000 so 1% is 100. Default is 100
  * @returns The minimum expected shares and the swap payload
  */
 export const previewOpenPosition = async (
@@ -87,8 +87,10 @@ export const previewOpenPosition = async (
   amount: string,
   amountToBorrow: string,
   strategyAddress: `0x${string}`,
-  slippagePercentage?: string
+  slippagePercentage = "100"
 ) => {
+  if (Number(slippagePercentage) > 10000)
+    throw new Error("Slippage percentage cannot be greater than 10000");
   const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
     await getOutputAssetFromStrategy(publicClient, strategyAddress);
   const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
@@ -100,14 +102,16 @@ export const previewOpenPosition = async (
     assetOut,
     assetOutDecimals
   );
-  // TODO add slippage percentage
   const swapOutputAmountBN = parseUnits(swapOutputAmount, assetOutDecimals);
-  const minimumExpectedShares: bigint = (await publicClient.readContract({
+  let minimumExpectedShares: bigint = (await publicClient.readContract({
     address: strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
     functionName: "previewDeposit",
     args: [swapOutputAmountBN],
   })) as bigint;
+  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
+  minimumExpectedShares =
+    (minimumExpectedShares * slippagePercentageBN) / BigInt(10000);
   return {
     minimumExpectedShares: formatUnits(minimumExpectedShares, assetOutDecimals),
     payload: payload,
@@ -170,11 +174,13 @@ export const closeLeveragedPosition = async (
  * Preview the close position
  * @param {PublicClient} publicClient Viem public client instance
  * @param {string} nftId nftId of the position
+ * @param {string} slippagePercentage Slippage percentage in 10000 so 1% is 100. Default is 100
  * @returns minimumWBTC and payload for the swap from the strategy asset to WBTC
  */
 export const previewClosePosition = async (
   publicClient: PublicClient,
-  nftId: string
+  nftId: string,
+  slippagePercentage = "100"
 ) => {
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
@@ -207,8 +213,6 @@ export const previewClosePosition = async (
     functionName: "decimals",
   })) as number;
 
-  // TODO add slippage
-  // TODO add exit fee calculation
   const { payload, swapOutputAmount: minimumWBTC } =
     await fetchUniswapRouteAndBuildPayload(
       publicClient,
@@ -218,7 +222,15 @@ export const previewClosePosition = async (
       WBTC,
       WBTC_DECIMALS
     );
-  return { minimumWBTC, payload };
+  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
+  const minimumWBTCBN = parseUnits(minimumWBTC, WBTC_DECIMALS);
+  const minimumWBTCWithSlippage =
+    (minimumWBTCBN * slippagePercentageBN) / BigInt(10000);
+
+  return {
+    minimumWBTC: formatUnits(minimumWBTCWithSlippage, WBTC_DECIMALS),
+    payload,
+  };
 };
 
 const getOutputAssetFromStrategy = async (
