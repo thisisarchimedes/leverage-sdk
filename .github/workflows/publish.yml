@@ -32,32 +32,32 @@ jobs:
         run: npm run build
 
       # Fetch all tags, check if any exist, and set version accordingly
-     - name: Fetch tags and set version
-        run: |
-          git fetch --tags
-          LATEST_TAG=$(git tag -l --sort=-v:refname 'v*' | head -n 1)
-          echo "Latest tag: $LATEST_TAG"
+      - name: Fetch tags and set version
+          run: |
+            git fetch --tags
+            LATEST_TAG=$(git tag -l --sort=-v:refname 'v*' | head -n 1)
+            echo "Latest tag: $LATEST_TAG"
 
-          # Fetch current version from package.json
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "Current version in package.json: $CURRENT_VERSION"
+            # Fetch current version from package.json
+            CURRENT_VERSION=$(node -p "require('./package.json').version")
+            echo "Current version in package.json: $CURRENT_VERSION"
 
-          if [[ "$LATEST_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            NEW_VERSION=$(echo ${LATEST_TAG:1} | awk -F. -v OFS=. '{$NF++; print}')
-          else
-            echo "No valid semantic version tags found or tags are not in expected format."
-            # Increment the current version's patch number
-            NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. -v OFS=. '{$NF++; print}')
-          fi
+            if [[ "$LATEST_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              NEW_VERSION=$(echo ${LATEST_TAG:1} | awk -F. -v OFS=. '{$NF++; print}')
+            else
+              echo "No valid semantic version tags found or tags are not in expected format."
+              # Increment the current version's patch number
+              NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. -v OFS=. '{$NF++; print}')
+            fi
 
-          if [ "$NEW_VERSION" == "$CURRENT_VERSION" ]; then
-            echo "New version is the same as current version. Incrementing patch number."
-            NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. -v OFS=. '{$NF++; print}')
-          fi
+            if [ "$NEW_VERSION" == "$CURRENT_VERSION" ]; then
+              echo "New version is the same as current version. Incrementing patch number."
+              NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. -v OFS=. '{$NF++; print}')
+            fi
 
-          echo "New version to set: $NEW_VERSION"
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          npm version $NEW_VERSION --no-git-tag-version
+            echo "New version to set: $NEW_VERSION"
+            echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+            npm version $NEW_VERSION --no-git-tag-version
 
       # Commit any changes (including updated package version)
       - name: Commit changes
