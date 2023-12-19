@@ -11,7 +11,7 @@ import { getLeverageAddresses } from "./utils";
 
 import POSITION_CLOSER_ABI from "./abis/PositionCloser.json";
 import POSITION_LEDGER_ABI from "./abis/PositionLedger.json";
-import MULTIPOOL_STRATEGY_ABI from "./abis/MultipoolStrategy.json";
+import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
 import { LedgerEntry } from "./types";
 
