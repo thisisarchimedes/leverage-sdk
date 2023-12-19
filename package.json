@@ -13,8 +13,7 @@
   ],
   "scripts": {
     "test": "vitest",
-    "build": "rm -rf ./build && npx tsc",
-    "postbuild": "node postbuild.js"
+    "build": "rm -rf ./build && npx tsc"
   },
   "repository": "git@github.com:thisisarchimedes/leverage-sdk.git",
   "author": "dev@archimedesfi.com",
