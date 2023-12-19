@@ -27,9 +27,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: List contents of the src directory
-        run: ls -al src/
-
       # Build the project
       - name: Build the project
         run: npm run build
