@@ -8,6 +8,7 @@ node_modules/
 *v8.log
 .env
 dist/
+build
 
 node_modules
 .env
