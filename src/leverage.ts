@@ -5,6 +5,7 @@ import { getLeverageAddresses } from "./utils";
 import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
 import { ClosePositionParams, LedgerEntry } from "./types";
+import { publicClient } from "./test/config";
 
 /**
  * Function to open a leveraged position
@@ -277,6 +278,47 @@ export const approveWBTCForPositionOpener = async (
     abi: ERC20_ABI,
     functionName: "approve",
     args: [positionOpener.address, amountBN],
+    account,
+  });
+  if (!request) return "No request found";
+  const hash = await walletClient.writeContract(request);
+  if (!hash) return "No hash found";
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  });
+  if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
+};
+
+/**
+ * Function to claim WBTC from expired vault after position is liquidated or expired
+ * @param {PublicClient} publicClient Viem public client instance
+ * @param {WalletClient} walletClient Viem wallet client instance
+ * @param nftId nftId of the position
+ * @param account wallet address of the user
+ * @returns {Object} result and transaction receipt
+ */
+export const claimTokensBack = async (
+  publicClient: PublicClient,
+  walletClient: WalletClient,
+  nftId: string,
+  account: `0x${string}`
+) => {
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const expiredVault = leverageAddresses.find(
+    (item: any) => item.name === "ExpiredVault"
+  );
+  if (!expiredVault) throw new Error("No expired vault found");
+  const { request, result } = await publicClient.simulateContract({
+    address: expiredVault.address,
+    abi: expiredVault.abi,
+    functionName: "claim",
+    args: [nftId],
     account,
   });
   if (!request) return "No request found";
