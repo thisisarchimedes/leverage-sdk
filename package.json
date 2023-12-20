@@ -1,11 +1,20 @@
 {
-  "name": "leverage-sdk",
-  "scripts": {
-    "test": "vitest"
-  },
-  "version": "1.0.0",
+  "name": "@thisisarchimedes/leverage-sdk",
+  "version": "1.0.3",
   "description": "A SDK for leverage operations",
-  "main": "index.js",
+  "main": "./build/index.js",
+  "types": "./dist/index.d.ts",
+  "private": false,
+  "files": [
+    "build/**/*.js",
+    "build/**/*.d.ts",
+    "build/**/*.js.map",
+    "build/**/*.json"
+  ],
+  "scripts": {
+    "test": "vitest",
+    "build": "rm -rf ./build && npx tsc"
+  },
   "repository": "git@github.com:thisisarchimedes/leverage-sdk.git",
   "author": "dev@archimedesfi.com",
   "license": "MIT",
