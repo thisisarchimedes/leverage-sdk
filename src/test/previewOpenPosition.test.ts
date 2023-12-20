@@ -44,4 +44,29 @@ describe("previewOpenPosition test", async () => {
       walletClient.account.address
     );
   });
+
+  it("should close position", async () => {
+    const { minimumExpectedShares, payload } = await previewOpenPosition(
+      publicClient,
+      "0.24",
+      "0.24",
+      FRAXBP_ALUSD_STRATEGY
+    );
+    await approveWBTCForPositionOpener(
+      publicClient,
+      walletClient,
+      walletClient.account.address,
+      "0.24"
+    );
+    await openLeveragedPosition(
+      publicClient,
+      walletClient,
+      "0.24",
+      "0.24",
+      minimumExpectedShares,
+      FRAXBP_ALUSD_STRATEGY,
+      payload,
+      walletClient.account.address
+    );
+  });
 });

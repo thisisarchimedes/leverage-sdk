@@ -2,7 +2,7 @@ import { PublicClient, WalletClient, formatUnits, parseUnits } from "viem";
 import { WBTC, WBTC_DECIMALS } from "./constants";
 import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
 import { getLeverageAddresses } from "./utils";
-import MULTIPOOL_STRATEGY_ABI from "./abis/MultipoolStrategy.json";
+import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
 import { ClosePositionParams, LedgerEntry } from "./types";
 
