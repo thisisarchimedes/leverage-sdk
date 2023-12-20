@@ -4,6 +4,7 @@
   "description": "A SDK for leverage operations",
   "main": "./build/index.js",
   "types": "./dist/index.d.ts",
+  "type": "module",
   "private": false,
   "files": [
     "build/**/*.js",
