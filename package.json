@@ -3,7 +3,7 @@
   "version": "1.0.3",
   "description": "A SDK for leverage operations",
   "main": "./build/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./build/index.d.ts",
   "type": "module",
   "private": false,
   "files": [
