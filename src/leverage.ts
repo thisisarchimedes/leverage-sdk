@@ -1,19 +1,10 @@
-import {
-  PublicClient,
-  WalletClient,
-  formatUnits,
-  getContract,
-  parseUnits,
-} from "viem";
+import { PublicClient, WalletClient, formatUnits, parseUnits } from "viem";
 import { WBTC, WBTC_DECIMALS } from "./constants";
 import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
 import { getLeverageAddresses } from "./utils";
-
-import POSITION_CLOSER_ABI from "./abis/PositionCloser.json";
-import POSITION_LEDGER_ABI from "./abis/PositionLedger.json";
-import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
+import MULTIPOOL_STRATEGY_ABI from "./abis/MultipoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
-import { LedgerEntry } from "./types";
+import { ClosePositionParams, LedgerEntry } from "./types";
 
 /**
  * Function to open a leveraged position
@@ -52,6 +43,7 @@ export const openLeveragedPosition = async (
   const positionOpener = leverageAddresses.find(
     (item: any) => item.name === "PositionOpener"
   );
+  if (!positionOpener) throw new Error("No position opener found");
   const openPositionStruct = {
     collateralAmount: amountBN,
     wbtcToBorrow: amountToBorrowBN,
@@ -81,13 +73,24 @@ export const openLeveragedPosition = async (
   };
 };
 
+/**
+ * Preview the open position
+ * @param publicClient Viem public client instance
+ * @param amount WBTC amount to open with
+ * @param amountToBorrow WBTC amount to borrow
+ * @param strategyAddress Underlying strategy address
+ * @param slippagePercentage Slippage percentage in 10000 so 1% is 100. Default is 100
+ * @returns The minimum expected shares and the swap payload
+ */
 export const previewOpenPosition = async (
   publicClient: PublicClient,
   amount: string,
   amountToBorrow: string,
   strategyAddress: `0x${string}`,
-  slippagePercentage?: string
+  slippagePercentage = "100"
 ) => {
+  if (Number(slippagePercentage) > 10000)
+    throw new Error("Slippage percentage cannot be greater than 10000");
   const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
     await getOutputAssetFromStrategy(publicClient, strategyAddress);
   const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
@@ -99,20 +102,32 @@ export const previewOpenPosition = async (
     assetOut,
     assetOutDecimals
   );
-  // TODO add slippage percentage
   const swapOutputAmountBN = parseUnits(swapOutputAmount, assetOutDecimals);
-  const minimumExpectedShares: bigint = (await publicClient.readContract({
+  let minimumExpectedShares: bigint = (await publicClient.readContract({
     address: strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
     functionName: "previewDeposit",
     args: [swapOutputAmountBN],
   })) as bigint;
+  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
+  minimumExpectedShares =
+    (minimumExpectedShares * slippagePercentageBN) / BigInt(10000);
   return {
     minimumExpectedShares: formatUnits(minimumExpectedShares, assetOutDecimals),
     payload: payload,
   };
 };
 
+/**
+ * Function to close a leveraged position
+ * @param {PublicClient} publicClient Viem public client instance
+ * @param {WalletClient} walletClient Viem wallet client instance
+ * @param {string} nftId nftId of the position
+ * @param {string} minWBTC minWBTC to receive
+ * @param {`0x${string}`} account wallet address of the user
+ * @param {string} payload payload for the swap from the strategy asset to WBTC
+ * @returns result and transaction receipt
+ */
 export const closeLeveragedPosition = async (
   publicClient: PublicClient,
   walletClient: WalletClient,
@@ -124,17 +139,22 @@ export const closeLeveragedPosition = async (
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
   const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const closePositionStruct: ClosePositionParams = {
+    nftId: nftId,
+    minWBTC: parseUnits(minWBTC, WBTC_DECIMALS),
+    swapRoute: "0",
+    swapData: payload,
+    exchange: "0x0000000000000000000000000000000000000000",
+  };
+  const positionCloser = leverageAddresses.find(
+    (item: any) => item.name === "PositionCloser"
+  );
+  if (!positionCloser) throw new Error("No position closer found");
   const { request, result } = await publicClient.simulateContract({
-    address: leverageAddresses.positionCloser,
-    abi: POSITION_CLOSER_ABI,
+    address: positionCloser.address,
+    abi: positionCloser.abi,
     functionName: "closePosition",
-    args: [
-      nftId,
-      parseUnits(minWBTC, WBTC_DECIMALS),
-      0,
-      payload,
-      "0x0000000000000000000000000000000000000000",
-    ],
+    args: [closePositionStruct],
     account,
   });
   if (!request) return "No request found";
@@ -150,19 +170,31 @@ export const closeLeveragedPosition = async (
   };
 };
 
+/**
+ * Preview the close position
+ * @param {PublicClient} publicClient Viem public client instance
+ * @param {string} nftId nftId of the position
+ * @param {string} slippagePercentage Slippage percentage in 10000 so 1% is 100. Default is 100
+ * @returns minimumWBTC and payload for the swap from the strategy asset to WBTC
+ */
 export const previewClosePosition = async (
   publicClient: PublicClient,
-  nftId: string
+  nftId: string,
+  slippagePercentage = "100"
 ) => {
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
   const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const positionLedger = leverageAddresses.find(
+    (item: any) => item.name === "PositionLedger"
+  );
+  if (!positionLedger) throw new Error("No position ledger found");
   const positionData: LedgerEntry = (await publicClient.readContract({
-    address: leverageAddresses.positionLedger,
-    abi: POSITION_LEDGER_ABI,
+    address: positionLedger.address,
+    abi: positionLedger.abi,
     functionName: "getPosition",
     args: [nftId],
-  })) as LedgerEntry;
+  })) as unknown as LedgerEntry;
   const minimumExpectedAssets = (await publicClient.readContract({
     address: positionData.strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
@@ -180,10 +212,7 @@ export const previewClosePosition = async (
     abi: ERC20_ABI,
     functionName: "decimals",
   })) as number;
-  formatUnits;
 
-  // TODO add slippage
-  // TODO add exit fee calculation
   const { payload, swapOutputAmount: minimumWBTC } =
     await fetchUniswapRouteAndBuildPayload(
       publicClient,
@@ -193,7 +222,15 @@ export const previewClosePosition = async (
       WBTC,
       WBTC_DECIMALS
     );
-  return { minimumWBTC, payload };
+  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
+  const minimumWBTCBN = parseUnits(minimumWBTC, WBTC_DECIMALS);
+  const minimumWBTCWithSlippage =
+    (minimumWBTCBN * slippagePercentageBN) / BigInt(10000);
+
+  return {
+    minimumWBTC: formatUnits(minimumWBTCWithSlippage, WBTC_DECIMALS),
+    payload,
+  };
 };
 
 const getOutputAssetFromStrategy = async (
@@ -213,6 +250,14 @@ const getOutputAssetFromStrategy = async (
   return { strategyAsset, assetDecimals };
 };
 
+/**
+ * Function to approve WBTC for the position opener
+ * @param {PublicClient} publicClient Viem public client instance
+ * @param {WalletClient} walletClient Viem wallet client instance
+ * @param {`0x${string}`} account wallet address of the user
+ * @param {string} amount amount to approve
+ * @returns {Object} result and transaction receipt
+ */
 export const approveWBTCForPositionOpener = async (
   publicClient: PublicClient,
   walletClient: WalletClient,
@@ -226,6 +271,7 @@ export const approveWBTCForPositionOpener = async (
     (item: any) => item.name === "PositionOpener"
   );
   const amountBN = parseUnits(amount, WBTC_DECIMALS);
+  if (!positionOpener) throw new Error("No position opener found");
   const { request, result } = await publicClient.simulateContract({
     address: WBTC,
     abi: ERC20_ABI,
