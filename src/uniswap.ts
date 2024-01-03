@@ -69,7 +69,7 @@ export const fetchUniswapRouteAndBuildPayload = async (
 
     const timestamp = Math.floor(Date.now() / 1000);
     const encodedPath = encodePacked(dataTypes, dataValues);
-    const deadline = BigInt(1703259197);
+    const deadline = BigInt(timestamp + 1000);
     const payload = encodeAbiParameters(
       [
         {
