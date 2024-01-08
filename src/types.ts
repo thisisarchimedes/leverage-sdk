@@ -25,3 +25,18 @@ export interface LeverageAddressesResponse {
   address: `0x${string}`;
   abi: Abi;
 }
+
+export interface LeveragePosition {
+  nftId: string;
+  user: string;
+  debtAmount: string;
+  timestamp: number;
+  currentPositionValue: string;
+  strategyShares: string;
+  strategy: string;
+  blockNumber: number;
+  positionExpireBlock: number;
+  positionState: string;
+  collateralAmount: string;
+  claimableAmount: string;
+}
