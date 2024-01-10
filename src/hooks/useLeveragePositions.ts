@@ -22,6 +22,9 @@ export const useLeveragePositions = (
         },
       });
       return data;
+    },
+    {
+      enabled: !!address && !!chainId,
     }
   );
   return {
