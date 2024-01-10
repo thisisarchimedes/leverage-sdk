@@ -13,3 +13,14 @@ export const LEVERAGE_ADDRESSES_URL: {
 };
 
 export const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
+export const LEVERAGE_POSITION_APIS: {
+  [key: number]: string;
+} = {
+  1: "https://2wl1ljv33k.execute-api.us-east-1.amazonaws.com/prod/positions",
+  1337: "https://2wl1ljv33k.execute-api.us-east-1.amazonaws.com/prod/positions",
+  11: "https://2wl1ljv33k.execute-api.us-east-1.amazonaws.com/prod/positions",
+  12: "https://2wl1ljv33k.execute-api.us-east-1.amazonaws.com/prod/positions",
+  31337:
+    "https://2wl1ljv33k.execute-api.us-east-1.amazonaws.com/prod/positions",
+};
