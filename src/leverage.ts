@@ -5,7 +5,6 @@ import { getLeverageAddresses } from "./utils";
 import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
 import { ClosePositionParams, LedgerEntry } from "./types";
-import { publicClient } from "./test/config";
 
 /**
  * Function to open a leveraged position
@@ -88,7 +87,7 @@ export const previewOpenPosition = async (
   amount: string,
   amountToBorrow: string,
   strategyAddress: `0x${string}`,
-  slippagePercentage = "100"
+  slippagePercentage = "50"
 ) => {
   if (Number(slippagePercentage) > 10000)
     throw new Error("Slippage percentage cannot be greater than 10000");
@@ -181,7 +180,7 @@ export const closeLeveragedPosition = async (
 export const previewClosePosition = async (
   publicClient: PublicClient,
   nftId: string,
-  slippagePercentage = "100"
+  slippagePercentage = "50"
 ) => {
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
