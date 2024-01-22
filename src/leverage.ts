@@ -44,7 +44,7 @@ export const getPositionState = async (publicClient: PublicClient, nftId:string)
  * @returns {number} The estimated number of minutes until the position expires, calculated based on the current block number and the position's expiration block.
  * @throws {Error} Throws an error if the public client is not set up or if the position ledger is not found.
  */
-export const getEstimatedPositionExpireDate = async (publicClient: PublicClient, nftId:string) => {
+export const getEstimatedPositionExpirationDate = async (publicClient: PublicClient, nftId:string) => {
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
 
