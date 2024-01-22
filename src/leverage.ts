@@ -1,10 +1,77 @@
 import { PublicClient, WalletClient, formatUnits, parseUnits } from "viem";
-import { WBTC, WBTC_DECIMALS } from "./constants";
+import { WBTC, WBTC_DECIMALS, BLOCKS_PER_MINUTE } from "./constants";
 import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
 import { getLeverageAddresses } from "./utils";
 import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
 import { ClosePositionParams, LedgerEntry } from "./types";
+
+
+/**
+ * Retrieves the current state of a specified position.
+ * @param {PublicClient} publicClient - An instance of the PublicClient to interact with the blockchain.
+ * @param {string} nftId - The NFT ID representing the position to be queried.
+ * @returns {Object} The state of the position as a LedgerEntry object, which includes details like position status, strategy shares, and expiration block.
+ * @throws {Error} Throws an error if the public client is not set up or if the position ledger is not found.
+ */
+export const getPositionState = async (publicClient: PublicClient, nftId:string) => {
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const positionLedger = leverageAddresses.find(
+    (item: any) => item.name === "PositionLedger"
+  );
+
+    if (!positionLedger) throw new Error("No position ledger found");
+
+
+  const positionData: LedgerEntry = (await publicClient.readContract({
+    address: positionLedger.address,
+    abi: positionLedger.abi,
+    functionName: "getPosition",
+    args: [nftId],
+  })) as unknown as LedgerEntry;
+
+  return positionData.state;
+
+}
+
+/**
+ * Estimates the expiration date of a leveraged position in minutes.
+ * @param {PublicClient} publicClient - An instance of the PublicClient used for blockchain interactions.
+ * @param {string} nftId - The NFT ID of the position for which the expiration date is being estimated.
+ * @returns {number} The estimated number of minutes until the position expires, calculated based on the current block number and the position's expiration block.
+ * @throws {Error} Throws an error if the public client is not set up or if the position ledger is not found.
+ */
+export const getEstimatedPositionExpireDate = async (publicClient: PublicClient, nftId:string) => {
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const positionLedger = leverageAddresses.find(
+    (item: any) => item.name === "PositionLedger"
+  );
+
+    if (!positionLedger) throw new Error("No position ledger found");
+
+
+  const positionData: LedgerEntry = (await publicClient.readContract({
+    address: positionLedger.address,
+    abi: positionLedger.abi,
+    functionName: "getPosition",
+    args: [nftId],
+  })) as unknown as LedgerEntry;
+
+  const currentBlock = await publicClient.getBlockNumber();
+  const parsedCurrBlock = parseFloat(currentBlock.toString())
+  const blocksDelta = positionData.positionExpirationBlock - currentBlock;
+
+  const estimatedMinsToExpire = parsedCurrBlock / BLOCKS_PER_MINUTE;
+
+  return estimatedMinsToExpire;
+}
+
 
 /**
  * Function to open a leveraged position
