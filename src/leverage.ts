@@ -64,10 +64,9 @@ export const getEstimatedPositionExpirationDate = async (publicClient: PublicCli
   })) as unknown as LedgerEntry;
 
   const currentBlock = await publicClient.getBlockNumber();
-  const parsedCurrBlock = parseFloat(currentBlock.toString())
   const blocksDelta = positionData.positionExpirationBlock - currentBlock;
 
-  const estimatedMinsToExpire = parsedCurrBlock / BLOCKS_PER_MINUTE;
+  const estimatedMinsToExpire = parseFloat(blocksDelta.toString()) / BLOCKS_PER_MINUTE;
 
   return estimatedMinsToExpire;
 }
