@@ -1,77 +1,11 @@
-import {
-  PublicClient,
-  WalletClient,
-  formatUnits,
-  parseUnits,
-  zeroAddress,
-} from 'viem'
-import { WBTC, WBTC_DECIMALS, BLOCKS_PER_MINUTE } from './constants'
-import { fetchUniswapRouteAndBuildPayload } from './uniswap'
-import { getLeverageAddresses } from './utils'
-import MULTIPOOL_STRATEGY_ABI from './abis/MultiPoolStrategy.json'
-import ERC20_ABI from './abis/ERC20.json'
-import { ClosePositionParams, LedgerEntry } from './types'
+import { PublicClient, WalletClient, formatUnits, parseUnits } from "viem";
+import { WBTC, WBTC_DECIMALS, BLOCKS_PER_MINUTE } from "./constants";
+import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
+import { getLeverageAddresses } from "./utils";
+import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
+import ERC20_ABI from "./abis/ERC20.json";
+import { ClosePositionParams, LedgerEntry } from "./types";
 
-// Utility Functions
-
-/**
- * Ensures that the public client is set up and retrieves leverage addresses.
- * This function checks if the public client is properly configured and then fetches leverage addresses for the current chain.
- * 
- * @param {PublicClient} publicClient - An instance of the PublicClient used for blockchain interactions.
- * 
- * @returns {Promise<Array>} A promise that resolves to an array of leverage addresses associated with the current chain ID.
- * 
- * @throws {Error} Throws an error if the public client is not set up.
- */
-const ensureClientAndFetchAddresses = async (publicClient: PublicClient) => {
-  if (publicClient.chain === undefined)
-    throw new Error('Please setup the wallet')
-  return await getLeverageAddresses(publicClient.chain.id)
-}
-
-/**
- * Finds a specific leverage contract from a list of leverage addresses.
- * This function searches for a contract with a specified name within the given leverage addresses.
- * 
- * @param {Array} leverageAddresses - An array of leverage address objects.
- * @param {string} name - The name of the contract to find within the leverage addresses.
- * 
- * @returns {Object} The leverage contract object that matches the specified name.
- * 
- * @throws {Error} Throws an error if the specified contract name is not found in the leverage addresses.
- */
-const findLeverageContract = (leverageAddresses, name: string) => {
-  const entry = leverageAddresses.find((item) => item.name === name)
-  if (!entry) throw new Error(`No ${name} found`)
-  return entry
-}
-
-/**
- * Processes a transaction using the public and wallet clients.
- * This function handles the entire lifecycle of a transaction, from simulation to sending the transaction and waiting for its receipt.
- * 
- * @param {PublicClient} publicClient - An instance of the PublicClient used for simulating the contract interaction.
- * @param {WalletClient} walletClient - An instance of the WalletClient used for writing the transaction to the blockchain.
- * @param {Object} contractDetails - The details of the contract interaction, including the address, ABI, function name, and arguments.
- * @param {string} account - The account address that will be used for the transaction.
- * 
- * @returns {Promise<Object>} A promise that resolves to the transaction receipt object.
- * 
- * @throws {Error} Throws an error if the transaction simulation fails, if the transaction hash is not found, or if the transaction receipt is not retrieved.
- */
-const processTransaction = async (
-  publicClient: PublicClient,
-  walletClient: WalletClient,
-  contractDetails,
-  account,
-) => {
-  const { request } = await publicClient.simulateContract(contractDetails)
-  if (!request) throw new Error('No request found')
-  const hash = await walletClient.writeContract(request, account)
-  if (!hash) throw new Error('No hash found')
-  return await publicClient.waitForTransactionReceipt({ hash })
-}
 
 /**
  * Retrieves the current state of a position based on its NFT ID.
@@ -85,17 +19,25 @@ const processTransaction = async (
  * @throws {Error} Throws an error if unable to fetch leverage addresses or if the PositionLedger contract is not found.
  */
 export const getPositionState = async (publicClient:PublicClient, nftId:string) => {
-  const leverageAddresses = await ensureClientAndFetchAddresses(publicClient)
-  const positionLedger = findLeverageContract(
-    leverageAddresses,
-    'PositionLedger',
-  )
-  const positionData = await publicClient.readContract({
+
+    if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+
+     const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+
+  const positionLedger = leverageAddresses.find(
+    (item: any) => item.name === "PositionLedger"
+  );
+
+    if (!positionLedger) throw new Error("No position ledger found");
+
+  const positionData : LedgerEntry = await publicClient.readContract({
     address: positionLedger.address,
     abi: positionLedger.abi,
     functionName: 'getPosition',
     args: [nftId],
-  })
+  }) as unknown as LedgerEntry;
+
   return positionData.state
 }
 
@@ -114,17 +56,25 @@ export const getEstimatedPositionExpirationDate = async (
   publicClient: PublicClient,
   nftId: string,
 ) => {
-  const leverageAddresses = await ensureClientAndFetchAddresses(publicClient)
-  const positionLedger = findLeverageContract(
-    leverageAddresses,
-    'PositionLedger',
-  )
-  const positionData = await publicClient.readContract({
+
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+ 
+    const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+
+  const positionLedger = leverageAddresses.find(
+    (item: any) => item.name === "PositionLedger"
+  );
+
+    if (!positionLedger) throw new Error("No position ledger found");
+
+  const positionData : LedgerEntry  = await publicClient.readContract({
     address: positionLedger.address,
     abi: positionLedger.abi,
     functionName: 'getPosition',
     args: [nftId],
-  })
+  }) as unknown as LedgerEntry;
+  
   const currentBlock = await publicClient.getBlockNumber()
   const blocksDelta = positionData.positionExpirationBlock - currentBlock
   const estimatedMinsToExpire =
@@ -154,49 +104,50 @@ export const openLeveragedPosition = async (
   payload: string,
   account: `0x${string}`
 ) => {
-  const leverageAddresses = await ensureClientAndFetchAddresses(publicClient)
-  const positionOpener = findLeverageContract(
-    leverageAddresses,
-    'PositionOpener',
-  )
-
-  const {
-    strategyAsset: assetOut,
-    assetDecimals: assetOutDecimals,
-  } = await getOutputAssetFromStrategy(publicClient, strategyAddress)
+  const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
+    await getOutputAssetFromStrategy(publicClient, strategyAddress);
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
 
   const minimumStrategySharesBN = parseUnits(
     minimumStrategyShares,
-    assetOutDecimals,
-  )
-  const amountBN = parseUnits(amount, WBTC_DECIMALS)
-  const amountToBorrowBN = parseUnits(amountToBorrow, WBTC_DECIMALS)
-
+    assetOutDecimals
+  );
+  const amountBN = parseUnits(amount, WBTC_DECIMALS);
+  const amountToBorrowBN = parseUnits(amountToBorrow, WBTC_DECIMALS);
+  const positionOpener = leverageAddresses.find(
+    (item: any) => item.name === "PositionOpener"
+  );
+  if (!positionOpener) throw new Error("No position opener found");
   const openPositionStruct = {
     collateralAmount: amountBN,
     wbtcToBorrow: amountToBorrowBN,
     strategy: strategyAddress,
     minStrategyShares: minimumStrategySharesBN,
-    swapRoute: '0',
+    swapRoute: "0",
     swapData: payload,
-    exchange: zeroAddress,
-  }
-
-  const transactionReceipt = await processTransaction(
-    publicClient,
-    walletClient,
-    {
-      address: positionOpener.address,
-      abi: positionOpener.abi,
-      functionName: 'openPosition',
-      args: [openPositionStruct],
-      account,
-    },
+    exchange: "0x0000000000000000000000000000000000000000",
+  };
+  const { request, result } = await publicClient.simulateContract({
+    address: positionOpener.address,
+    abi: positionOpener.abi,
+    functionName: "openPosition",
+    args: [openPositionStruct],
     account,
-  )
-
-  return transactionReceipt
-}
+  });
+  if (!request) return "No request found";
+  const hash = await walletClient.writeContract(request);
+  if (!hash) return "No hash found";
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  });
+  if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
+};
 
 /**
  * Preview the open position
@@ -215,40 +166,33 @@ export const previewOpenPosition = async (
   slippagePercentage = "50"
 ) => {
   if (Number(slippagePercentage) > 10000)
-    throw new Error('Slippage percentage cannot be greater than 10000')
-
-  const {
-    strategyAsset: assetOut,
-    assetDecimals: assetOutDecimals,
-  } = await getOutputAssetFromStrategy(publicClient, strategyAddress)
-
-  const totalAmount = (Number(amount) + Number(amountToBorrow)).toString()
+    throw new Error("Slippage percentage cannot be greater than 10000");
+  const { strategyAsset: assetOut, assetDecimals: assetOutDecimals } =
+    await getOutputAssetFromStrategy(publicClient, strategyAddress);
+  const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
   const { payload, swapOutputAmount } = await fetchUniswapRouteAndBuildPayload(
     publicClient,
     totalAmount,
     WBTC,
     WBTC_DECIMALS,
     assetOut,
-    assetOutDecimals,
-  )
-
-  const swapOutputAmountBN = parseUnits(swapOutputAmount, assetOutDecimals)
-  let minimumExpectedShares = await publicClient.readContract({
+    assetOutDecimals
+  );
+  const swapOutputAmountBN = parseUnits(swapOutputAmount, assetOutDecimals);
+  let minimumExpectedShares: bigint = (await publicClient.readContract({
     address: strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
-    functionName: 'previewDeposit',
+    functionName: "previewDeposit",
     args: [swapOutputAmountBN],
-  })
-
-  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage))
+  })) as bigint;
+  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
   minimumExpectedShares =
-    (minimumExpectedShares * slippagePercentageBN) / BigInt(10000)
-
+    (minimumExpectedShares * slippagePercentageBN) / BigInt(10000);
   return {
     minimumExpectedShares: formatUnits(minimumExpectedShares, assetOutDecimals),
-    payload,
-  }
-}
+    payload: payload,
+  };
+};
 
 /**
  * Function to close a leveraged position
@@ -268,35 +212,39 @@ export const closeLeveragedPosition = async (
   account: `0x${string}`,
   payload: string
 ) => {
-  const leverageAddresses = await ensureClientAndFetchAddresses(publicClient)
-  const positionCloser = findLeverageContract(
-    leverageAddresses,
-    'PositionCloser',
-  )
-
-  const closePositionStruct = {
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const closePositionStruct: ClosePositionParams = {
     nftId: nftId,
     minWBTC: parseUnits(minWBTC, WBTC_DECIMALS),
-    swapRoute: '0',
+    swapRoute: "0",
     swapData: payload,
-    exchange: zeroAddress,
-  }
-
-  const transactionReceipt = await processTransaction(
-    publicClient,
-    walletClient,
-    {
-      address: positionCloser.address,
-      abi: positionCloser.abi,
-      functionName: 'closePosition',
-      args: [closePositionStruct],
-      account,
-    },
+    exchange: "0x0000000000000000000000000000000000000000",
+  };
+  const positionCloser = leverageAddresses.find(
+    (item: any) => item.name === "PositionCloser"
+  );
+  if (!positionCloser) throw new Error("No position closer found");
+  const { request, result } = await publicClient.simulateContract({
+    address: positionCloser.address,
+    abi: positionCloser.abi,
+    functionName: "closePosition",
+    args: [closePositionStruct],
     account,
-  )
-
-  return transactionReceipt
-}
+  });
+  if (!request) return "No request found";
+  const hash = await walletClient.writeContract(request);
+  if (!hash) return "No hash found";
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  });
+  if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
+};
 
 /**
  * Preview the close position
@@ -309,64 +257,74 @@ export const previewClosePosition = async (
   publicClient: PublicClient,
   nftId: string,
   slippagePercentage = "50"
-) =>{
-  if (Number(slippagePercentage) > 10000)
-    throw new Error('Slippage percentage cannot be greater than 10000')
-
-  const leverageAddresses = await ensureClientAndFetchAddresses(publicClient)
-  const positionLedger = findLeverageContract(
-    leverageAddresses,
-    'PositionLedger',
-  )
-
-  const positionData = await publicClient.readContract({
+) => {
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const positionLedger = leverageAddresses.find(
+    (item: any) => item.name === "PositionLedger"
+  );
+  if (!positionLedger) throw new Error("No position ledger found");
+  const positionData: LedgerEntry = (await publicClient.readContract({
     address: positionLedger.address,
     abi: positionLedger.abi,
-    functionName: 'getPosition',
+    functionName: "getPosition",
     args: [nftId],
-  })
-
-  const minimumExpectedAssets = await publicClient.readContract({
+  })) as unknown as LedgerEntry;
+  const minimumExpectedAssets = (await publicClient.readContract({
     address: positionData.strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
-    functionName: 'convertToAssets',
+    functionName: "convertToAssets",
     args: [positionData.strategyShares],
-  })
-
-  const strategyAsset = await publicClient.readContract({
+  })) as bigint;
+  const strategyAsset = (await publicClient.readContract({
     address: positionData.strategyAddress,
     abi: MULTIPOOL_STRATEGY_ABI,
-    functionName: 'asset',
-  })
+    functionName: "asset",
+  })) as `0x${string}`;
 
-  const assetDecimals = await publicClient.readContract({
+  const assetDecimals = (await publicClient.readContract({
     address: strategyAsset,
     abi: ERC20_ABI,
-    functionName: 'decimals',
-  })
+    functionName: "decimals",
+  })) as number;
 
-  const {
-    payload,
-    swapOutputAmount: minimumWBTC,
-  } = await fetchUniswapRouteAndBuildPayload(
-    publicClient,
-    formatUnits(minimumExpectedAssets, assetDecimals),
-    strategyAsset,
-    assetDecimals,
-    WBTC,
-    WBTC_DECIMALS,
-  )
-
-  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage))
-  const minimumWBTCBN = parseUnits(minimumWBTC, WBTC_DECIMALS)
+  const { payload, swapOutputAmount: minimumWBTC } =
+    await fetchUniswapRouteAndBuildPayload(
+      publicClient,
+      formatUnits(minimumExpectedAssets, assetDecimals),
+      strategyAsset,
+      assetDecimals,
+      WBTC,
+      WBTC_DECIMALS
+    );
+  const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
+  const minimumWBTCBN = parseUnits(minimumWBTC, WBTC_DECIMALS);
   const minimumWBTCWithSlippage =
-    (minimumWBTCBN * slippagePercentageBN) / BigInt(10000)
+    (minimumWBTCBN * slippagePercentageBN) / BigInt(10000);
 
   return {
     minimumWBTC: formatUnits(minimumWBTCWithSlippage, WBTC_DECIMALS),
     payload,
-  }
-}
+  };
+};
+
+const getOutputAssetFromStrategy = async (
+  publicClient: PublicClient,
+  strategyAddress: `0x${string}`
+) => {
+  const strategyAsset = (await publicClient.readContract({
+    address: strategyAddress,
+    abi: MULTIPOOL_STRATEGY_ABI,
+    functionName: "asset",
+  })) as `0x${string}`;
+  const assetDecimals = (await publicClient.readContract({
+    address: strategyAsset,
+    abi: ERC20_ABI,
+    functionName: "decimals",
+  })) as number;
+  return { strategyAsset, assetDecimals };
+};
 
 /**
  * Function to approve WBTC for the position opener
@@ -381,30 +339,34 @@ export const approveWBTCForPositionOpener = async (
   walletClient: WalletClient,
   account: `0x${string}`,
   amount: string
-) =>  {
-  const leverageAddresses = await ensureClientAndFetchAddresses(publicClient)
-  const positionOpener = findLeverageContract(
-    leverageAddresses,
-    'PositionOpener',
-  )
-
-  const amountBN = parseUnits(amount, WBTC_DECIMALS)
-
-  const transactionReceipt = await processTransaction(
-    publicClient,
-    walletClient,
-    {
-      address: WBTC,
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      args: [positionOpener.address, amountBN],
-      account,
-    },
+) => {
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const positionOpener = leverageAddresses.find(
+    (item: any) => item.name === "PositionOpener"
+  );
+  const amountBN = parseUnits(amount, WBTC_DECIMALS);
+  if (!positionOpener) throw new Error("No position opener found");
+  const { request, result } = await publicClient.simulateContract({
+    address: WBTC,
+    abi: ERC20_ABI,
+    functionName: "approve",
+    args: [positionOpener.address, amountBN],
     account,
-  )
-
-  return transactionReceipt
-}
+  });
+  if (!request) return "No request found";
+  const hash = await walletClient.writeContract(request);
+  if (!hash) return "No hash found";
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  });
+  if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
+};
 
 /**
  * Function to claim WBTC from expired vault after position is liquidated or expired
@@ -420,53 +382,29 @@ export const claimTokensBack = async (
   nftId: string,
   account: `0x${string}`
 ) => {
-  const leverageAddresses = await ensureClientAndFetchAddresses(publicClient)
-  const expiredVault = findLeverageContract(leverageAddresses, 'ExpiredVault')
-
-  const transactionReceipt = await processTransaction(
-    publicClient,
-    walletClient,
-    {
-      address: expiredVault.address,
-      abi: expiredVault.abi,
-      functionName: 'claim',
-      args: [nftId],
-      account,
-    },
+  if (publicClient.chain === undefined)
+    throw new Error("Please setup the wallet");
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const expiredVault = leverageAddresses.find(
+    (item: any) => item.name === "ExpiredVault"
+  );
+  if (!expiredVault) throw new Error("No expired vault found");
+  const { request, result } = await publicClient.simulateContract({
+    address: expiredVault.address,
+    abi: expiredVault.abi,
+    functionName: "claim",
+    args: [nftId],
     account,
-  )
-
-  return transactionReceipt
-}
-
-/**
- * Retrieves the asset and its decimal count associated with a given strategy.
- * This function is intended to provide details about the asset that a strategy operates with.
- * 
- * @param {PublicClient} publicClient - An instance of the PublicClient used for reading data from the blockchain.
- * @param {string} strategyAddress - The blockchain address of the strategy contract from which the asset details are to be fetched.
- * 
- * @returns {Object} An object containing two properties: 
- *                    - `strategyAsset`: The address of the asset used in the strategy.
- *                    - `assetDecimals`: The number of decimal places used for the asset.
- *
- * @throws {Error} Throws an error if the public client fails to read from the contract.
- */
-export const getOutputAssetFromStrategy = async (
-  publicClient: PublicClient,
-  strategyAddress: string,
-) => {
-  const strategyAsset = await publicClient.readContract({
-    address: strategyAddress,
-    abi: MULTIPOOL_STRATEGY_ABI,
-    functionName: 'asset',
-  })
-
-  const assetDecimals = await publicClient.readContract({
-    address: strategyAsset,
-    abi: ERC20_ABI,
-    functionName: 'decimals',
-  })
-
-  return { strategyAsset, assetDecimals }
-}
+  });
+  if (!request) return "No request found";
+  const hash = await walletClient.writeContract(request);
+  if (!hash) return "No hash found";
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  });
+  if (!transactionReceipt) return "No transaction receipt";
+  return {
+    result,
+    transactionReceipt,
+  };
+};
