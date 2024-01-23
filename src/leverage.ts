@@ -6,81 +6,81 @@ import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
 import { ClosePositionParams, LedgerEntry } from "./types";
 
-
 /**
  * Retrieves the current state of a position based on its NFT ID.
  * This function fetches the state of a position from the blockchain using the PositionLedger contract.
- * 
+ *
  * @param {PublicClient} publicClient - An instance of the PublicClient used for reading data from the blockchain.
  * @param {string} nftId - The NFT ID representing the position whose state is to be retrieved.
- * 
+ *
  * @returns {Promise<Object>} A promise that resolves to the state of the position, including details such as position status, strategy shares, and expiration block.
- * 
+ *
  * @throws {Error} Throws an error if unable to fetch leverage addresses or if the PositionLedger contract is not found.
  */
-export const getPositionState = async (publicClient:PublicClient, nftId:string) => {
-
-    if (publicClient.chain === undefined)
+export const getPositionState = async (
+  publicClient: PublicClient,
+  nftId: string
+) => {
+  if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
 
-     const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
 
   const positionLedger = leverageAddresses.find(
     (item: any) => item.name === "PositionLedger"
   );
 
-    if (!positionLedger) throw new Error("No position ledger found");
+  if (!positionLedger) throw new Error("No position ledger found");
 
-  const positionData : LedgerEntry = await publicClient.readContract({
+  const positionData: LedgerEntry = (await publicClient.readContract({
     address: positionLedger.address,
     abi: positionLedger.abi,
-    functionName: 'getPosition',
+    functionName: "getPosition",
     args: [nftId],
-  }) as unknown as LedgerEntry;
+  })) as unknown as LedgerEntry;
 
-  return positionData.state
-}
+  return positionData.state;
+};
 
 /**
  * Estimates the expiration date of a leveraged position in minutes.
  * This function calculates the time until expiration of a position based on the current blockchain block number and the position's expiration block.
- * 
+ *
  * @param {PublicClient} publicClient - An instance of the PublicClient used for blockchain interactions.
  * @param {string} nftId - The NFT ID of the position for which the expiration date is being estimated.
- * 
+ *
  * @returns {Promise<number>} A promise that resolves to the estimated number of minutes until the position expires.
- * 
+ *
  * @throws {Error} Throws an error if unable to fetch leverage addresses, if the PositionLedger contract is not found, or if there are issues in reading the contract data.
  */
 export const getEstimatedPositionExpirationDate = async (
   publicClient: PublicClient,
-  nftId: string,
+  nftId: string
 ) => {
-
   if (publicClient.chain === undefined)
     throw new Error("Please setup the wallet");
- 
-    const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
+
+  const leverageAddresses = await getLeverageAddresses(publicClient.chain.id);
 
   const positionLedger = leverageAddresses.find(
     (item: any) => item.name === "PositionLedger"
   );
 
-    if (!positionLedger) throw new Error("No position ledger found");
+  if (!positionLedger) throw new Error("No position ledger found");
 
-  const positionData : LedgerEntry  = await publicClient.readContract({
+  const positionData: LedgerEntry = (await publicClient.readContract({
     address: positionLedger.address,
     abi: positionLedger.abi,
-    functionName: 'getPosition',
+    functionName: "getPosition",
     args: [nftId],
-  }) as unknown as LedgerEntry;
-  
-  const currentBlock = await publicClient.getBlockNumber()
-  const blocksDelta = positionData.positionExpirationBlock - currentBlock
+  })) as unknown as LedgerEntry;
+
+  const currentBlock = await publicClient.getBlockNumber();
+  const blocksDelta = positionData.positionExpirationBlock - currentBlock;
   const estimatedMinsToExpire =
-    parseFloat(blocksDelta.toString()) / BLOCKS_PER_MINUTE
-  return estimatedMinsToExpire
-}
+    parseFloat(blocksDelta.toString()) / BLOCKS_PER_MINUTE;
+  return estimatedMinsToExpire;
+};
 
 /**
  * Function to open a leveraged position
