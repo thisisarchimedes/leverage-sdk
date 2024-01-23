@@ -1,6 +1,6 @@
 {
   "name": "@thisisarchimedes/leverage-sdk",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "A SDK for leverage operations",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",

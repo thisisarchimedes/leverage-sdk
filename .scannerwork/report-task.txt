@@ -3,5 +3,5 @@ projectKey=thisisarchimedes_leverage-sdk
 serverUrl=https://sonarcloud.io
 serverVersion=8.0.0.52135
 dashboardUrl=https://sonarcloud.io/dashboard?id=thisisarchimedes_leverage-sdk&branch=main
-ceTaskId=AY02eTHmio8ufA3j1v7b
-ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AY02eTHmio8ufA3j1v7b
+ceTaskId=AY03IsrlfKLefvRCISnZ
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AY03IsrlfKLefvRCISnZ
