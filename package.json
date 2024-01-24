@@ -1,6 +1,6 @@
 {
   "name": "@thisisarchimedes/leverage-sdk",
-  "version": "1.0.17",
+  "version": "1.0.21",
   "description": "A SDK for leverage operations",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -26,9 +26,9 @@
     "vitest": "^1.0.4"
   },
   "dependencies": {
-    "@uniswap/sdk-core": "^4.0.9",
-    "@uniswap/smart-order-router": "^3.19.2",
-    "@uniswap/v3-sdk": "^3.10.0",
+    "@uniswap/sdk-core": "^4.0.10",
+    "@uniswap/smart-order-router": "3.20.1",
+    "@uniswap/v3-sdk": "^3.10.2",
     "axios": "^1.6.2",
     "ethers": "5.7.2"
   },
