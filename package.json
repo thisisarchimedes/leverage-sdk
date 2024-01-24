@@ -19,6 +19,7 @@
   "author": "dev@archimedesfi.com",
   "license": "MIT",
   "devDependencies": {
+    "@stryker-mutator/core": "^8.0.0",
     "dotenv": "^16.3.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.3.2",
