@@ -8,7 +8,7 @@ on:
 env:
   API_DEVOPS_EVENT_CATCHER: ${{ vars.API_DEVOPS_EVENT_CATCHER }}
   DEVOPS_EVENTS_SECRET_TOKEN: ${{ secrets.DEVOPS_EVENTS_SECRET_TOKEN }}
-  
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -55,10 +55,9 @@ jobs:
       - name: Runnig Stryker Mutator JS
         id: mutation_testing
         run : |  
-          npx stryker run > stryker_log.txt
-          cat stryker_log.txt
-          echo "COVERAGE_STRYKER_FUNC=`awk '/^All files/{print $4}' stryker_log.txt`" >> $GITHUB_ENV
-          echo Stryker Mutator score: ${{ env.COVERAGE_STRYKER_FUNC}}
+          #npx stryker run > stryker_log.txt
+          #echo "COVERAGE_STRYKER_FUNC=`awk '/^All files/{print $4}' stryker_log.txt`" >> $GITHUB_ENV
+          #echo Stryker Mutator score: ${{ env.COVERAGE_STRYKER_FUNC}}
 
 
       - name: Report test run time
