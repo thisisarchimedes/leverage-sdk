@@ -393,7 +393,7 @@ export const claimTokensBack = async (
     address: expiredVault.address,
     abi: expiredVault.abi,
     functionName: "claim",
-    args: [nftId],
+    args: [parseUnits(nftId, 0)],
     account,
   });
   if (!request) return "No request found";
