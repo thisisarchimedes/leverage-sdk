@@ -1,6 +1,6 @@
 {
   "name": "@thisisarchimedes/leverage-sdk",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "description": "A SDK for leverage operations",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -31,7 +31,6 @@
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-mocha": "^10.2.0",
     "eslint-plugin-promise": "^6.1.1"
-
   },
   "dependencies": {
     "@uniswap/sdk-core": "^4.0.10",
