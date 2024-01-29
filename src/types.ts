@@ -1,4 +1,4 @@
-import { Abi } from "viem";
+import {Abi} from 'viem';
 
 export interface LedgerEntry {
   collateralAmount: bigint;
