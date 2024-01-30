@@ -1,6 +1,6 @@
 import { Abi, PublicClient, WalletClient, formatUnits, parseUnits } from "viem";
 import { WBTC, WBTC_DECIMALS, BLOCKS_PER_MINUTE } from "./constants";
-import { fetchUniswapRouteAndBuildPayload } from "./uniswap";
+import { UniswapService } from "./uniswap";
 import { getLeverageAddresses } from "./utils";
 import MULTIPOOL_STRATEGY_ABI from "./abis/MultiPoolStrategy.json";
 import ERC20_ABI from "./abis/ERC20.json";
@@ -13,8 +13,10 @@ import { ClientService } from "./clientService";
 
 export class LeverageActions {
   readonly clientService: ClientService;
+  readonly uniswapService: UniswapService;
   constructor(publicClient: PublicClient, walletClient: WalletClient) {
     this.clientService = new ClientService(publicClient, walletClient);
+    this.uniswapService = new UniswapService(publicClient);
   }
 
   /**
@@ -170,8 +172,7 @@ export class LeverageActions {
       await this.getOutputAssetFromStrategy(strategyAddress);
     const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
     const { payload, swapOutputAmount } =
-      await fetchUniswapRouteAndBuildPayload(
-        this.publicClient,
+      await this.uniswapService.fetchUniswapRouteAndBuildPayload(
         totalAmount,
         WBTC,
         WBTC_DECIMALS,
@@ -283,8 +284,7 @@ export class LeverageActions {
     )) as number;
 
     const { payload, swapOutputAmount: minimumWBTC } =
-      await fetchUniswapRouteAndBuildPayload(
-        this.publicClient,
+      await this.uniswapService.fetchUniswapRouteAndBuildPayload(
         formatUnits(minimumExpectedAssets, assetDecimals),
         strategyAsset,
         assetDecimals,
