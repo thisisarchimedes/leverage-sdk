@@ -14,8 +14,13 @@ import { ClientService } from "./clientService";
 export class LeverageActions {
   readonly clientService: ClientService;
   readonly uniswapService: UniswapService;
-  constructor(publicClient: PublicClient, walletClient: WalletClient) {
-    this.clientService = new ClientService(publicClient, walletClient);
+  constructor(
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    clientService?: ClientService
+  ) {
+    this.clientService =
+      clientService || new ClientService(publicClient, walletClient);
     this.uniswapService = new UniswapService(publicClient);
   }
 
@@ -177,18 +182,17 @@ export class LeverageActions {
         WBTC,
         WBTC_DECIMALS,
         assetOut,
-        assetOutDecimals
+        assetOutDecimals,
+        slippagePercentage
       );
-    const swapOutputAmountBN = parseUnits(swapOutputAmount, assetOutDecimals);
+
     let minimumExpectedShares: bigint = (await this.clientService.readContract(
       strategyAddress,
       MULTIPOOL_STRATEGY_ABI as Abi,
       "previewDeposit",
-      [swapOutputAmountBN]
+      [swapOutputAmount]
     )) as bigint;
-    const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
-    minimumExpectedShares =
-      (minimumExpectedShares * slippagePercentageBN) / BigInt(10000);
+
     return {
       minimumExpectedShares: formatUnits(
         minimumExpectedShares,
@@ -289,15 +293,12 @@ export class LeverageActions {
         strategyAsset,
         assetDecimals,
         WBTC,
-        WBTC_DECIMALS
+        WBTC_DECIMALS,
+        slippagePercentage
       );
-    const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
-    const minimumWBTCBN = parseUnits(minimumWBTC, WBTC_DECIMALS);
-    const minimumWBTCWithSlippage =
-      (minimumWBTCBN * slippagePercentageBN) / BigInt(10000);
 
     return {
-      minimumWBTC: formatUnits(minimumWBTCWithSlippage, WBTC_DECIMALS),
+      minimumWBTC: formatUnits(minimumWBTC, WBTC_DECIMALS),
       payload,
     };
   };

@@ -44,8 +44,9 @@ export class UniswapService {
     inputToken: string,
     inputTokenDecimals: number,
     outputToken: string,
-    outputTokenDecimals: number
-  ): Promise<{ payload: string; swapOutputAmount: string }> => {
+    outputTokenDecimals: number,
+    slippagePercentage = "50"
+  ): Promise<{ payload: string; swapOutputAmount: bigint }> => {
     try {
       // Primary token always will be WBTC for now
       const primaryAsset = new Token(1, inputToken, inputTokenDecimals);
@@ -66,44 +67,25 @@ export class UniswapService {
       );
       const { pools, tokenPath, swapOutputAmount } = this.mapRouteData(route);
 
-      const { dataTypes, dataValues } = this.buildPathFromUniswapRouteData(
+      const timestamp = Math.floor(Date.now() / 1000);
+      const encodedPath = this.buildPathFromUniswapRouteDataAndEncode(
         pools,
         tokenPath
       );
-
-      const timestamp = Math.floor(Date.now() / 1000);
-      const encodedPath = encodePacked(dataTypes, dataValues);
       const deadline = BigInt(timestamp + 1000);
-      const payload = encodeAbiParameters(
-        [
-          {
-            components: [
-              {
-                name: "path",
-                type: "bytes",
-              },
-              {
-                name: "deadline",
-                type: "uint256",
-              },
-              {
-                name: "amountOutMin",
-                type: "uint256",
-              },
-            ],
-            name: "UniswapV3Data",
-            type: "tuple",
-          },
-        ],
-        [
-          {
-            path: encodedPath,
-            deadline: deadline,
-            amountOutMin: swapOutputAmount,
-          },
-        ]
+      const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
+      const swapOutputAmountBN = parseUnits(
+        swapOutputAmount,
+        outputTokenDecimals
       );
-      return { swapOutputAmount, payload };
+      const swapOutputAmountBNWithSlippage =
+        (swapOutputAmountBN * slippagePercentageBN) / BigInt(10000);
+      const payload = this.buildPayload(
+        encodedPath,
+        deadline,
+        swapOutputAmountBNWithSlippage
+      );
+      return { swapOutputAmount: swapOutputAmountBNWithSlippage, payload };
     } catch (err) {
       console.log("fetchUniswapRoute err: ", err);
       throw err;
@@ -111,12 +93,12 @@ export class UniswapService {
   };
 
   /*
-   * Builds the path data for a Uniswap route
+   * Builds the path data for a Uniswap route and encode it
    * @param pools The pools to build the path from
    * @param tokens The tokens to build the path from
    */
-  buildPathFromUniswapRouteData = (pools: Pool[], tokens: Token[]) => {
-    const dataTypes = [];
+  buildPathFromUniswapRouteDataAndEncode = (pools: Pool[], tokens: Token[]) => {
+    const dataTypes: string[] = [];
     const dataValues = tokens.map((t) => t.address);
     let feeIndex = 1;
     for (let i = 0; i < pools.length; i++) {
@@ -129,7 +111,7 @@ export class UniswapService {
       dataValues.splice(feeIndex, 0, currentPool.fee.toString());
       feeIndex += 2;
     }
-    return { dataTypes, dataValues };
+    return encodePacked(dataTypes, dataValues);
   };
 
   /*
@@ -144,5 +126,41 @@ export class UniswapService {
     const tokenPath = route.route[0].route.tokenPath;
     const swapOutputAmount = route.quote.toExact() || 0;
     return { pools, tokenPath, swapOutputAmount };
+  };
+
+  buildPayload = (
+    encodedPath: `0x${string}`,
+    deadline: bigint,
+    swapOutputAmount: bigint
+  ): string => {
+    return encodeAbiParameters(
+      [
+        {
+          components: [
+            {
+              name: "path",
+              type: "bytes",
+            },
+            {
+              name: "deadline",
+              type: "uint256",
+            },
+            {
+              name: "amountOutMin",
+              type: "uint256",
+            },
+          ],
+          name: "UniswapV3Data",
+          type: "tuple",
+        },
+      ],
+      [
+        {
+          path: encodedPath,
+          deadline: deadline,
+          amountOutMin: swapOutputAmount,
+        },
+      ]
+    );
   };
 }
