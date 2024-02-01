@@ -1,5 +1,12 @@
-import { Abi, PublicClient, WalletClient } from "viem";
+import {Abi, PublicClient, WalletClient} from 'viem';
 
+type SimulateContractArgs = {
+  address: `0x${string}`;
+  abi: Abi;
+  functionName: string;
+  args: unknown[];
+  account: `0x${string}`;
+};
 export class ClientService {
   readonly publicClient: PublicClient;
   readonly walletClient: WalletClient;
@@ -9,22 +16,17 @@ export class ClientService {
     this.walletClient = walletClient;
   }
 
-  simulateTransaction = async (args: any) => {
-    return await this.publicClient.simulateContract({ ...args });
+  simulateTransaction = async (args: SimulateContractArgs) => {
+    return await this.publicClient.simulateContract(args);
   };
 
   getChainId = (): number => {
     if (this.publicClient.chain === undefined) {
-      throw new Error("Please setup the wallet");
+      throw new Error('Please setup the wallet');
     }
     return this.publicClient.chain.id;
   };
-  readContract = async (
-    address: `0x${string}`,
-    abi: Abi,
-    functionName: string,
-    args?: any[]
-  ) => {
+  readContract = async (address: `0x${string}`, abi: Abi, functionName: string, args?: unknown[]) => {
     return await this.publicClient.readContract({
       address,
       abi,
@@ -33,27 +35,30 @@ export class ClientService {
     });
   };
   waitForTransactionReceipt = async (txHash: `0x${string}`) => {
-    return await this.publicClient.waitForTransactionReceipt({ hash: txHash });
+    return await this.publicClient.waitForTransactionReceipt({
+      hash: txHash,
+    });
   };
   getBlockNumber = async () => {
     return await this.publicClient.getBlockNumber();
   };
   simulateContract = async (
-    address: `0x${string}`,
-    abi: Abi,
-    functionName: string,
-    args: any[],
-    account: `0x${string}`
+      address: `0x${string}`,
+      abi: Abi,
+      functionName: string,
+      args: unknown[],
+      account: `0x${string}`,
   ) => {
-    const { request, result } = await this.publicClient.simulateContract({
+    const {request, result} = await this.publicClient.simulateContract({
       address,
       abi,
       functionName,
       args,
       account,
     });
-    return { request, result };
+    return {request, result};
   };
+  // eslint-disable-next-line
   writeContract = async (request: any) => {
     return await this.walletClient.writeContract(request);
   };

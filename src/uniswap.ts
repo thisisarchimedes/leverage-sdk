@@ -1,10 +1,10 @@
-import { AlphaRouter, SwapRoute } from "@uniswap/smart-order-router";
-import { CurrencyAmount, TradeType, Token } from "@uniswap/sdk-core";
-import { Protocol } from "@uniswap/router-sdk";
-import { PublicClient, parseUnits } from "viem";
-import { Pool } from "@uniswap/v3-sdk";
-import { encodePacked, encodeAbiParameters } from "viem";
-import { providers } from "ethers";
+import {AlphaRouter, SwapRoute} from '@uniswap/smart-order-router';
+import {CurrencyAmount, TradeType, Token} from '@uniswap/sdk-core';
+import {Protocol} from '@uniswap/router-sdk';
+import {PublicClient, parseUnits} from 'viem';
+import {Pool} from '@uniswap/v3-sdk';
+import {encodePacked, encodeAbiParameters} from 'viem';
+import {providers} from 'ethers';
 
 export class UniswapService {
   readonly router: AlphaRouter;
@@ -15,7 +15,7 @@ export class UniswapService {
       !client.chain.id ||
       !client.chain.name
     ) {
-      throw new Error("Please setup the wallet");
+      throw new Error('Please setup the wallet');
     }
     const network = {
       chainId: client.chain.id,
@@ -40,12 +40,12 @@ export class UniswapService {
    * @return {Object} The uniswap route
    */
   fetchUniswapRouteAndBuildPayload = async (
-    amount: string,
-    inputToken: string,
-    inputTokenDecimals: number,
-    outputToken: string,
-    outputTokenDecimals: number,
-    slippagePercentage = "50"
+      amount: string,
+      inputToken: string,
+      inputTokenDecimals: number,
+      outputToken: string,
+      outputTokenDecimals: number,
+      slippagePercentage = '50',
   ): Promise<{ payload: string; swapOutputAmount: bigint }> => {
     try {
       // Primary token always will be WBTC for now
@@ -53,41 +53,42 @@ export class UniswapService {
       // Secondary token will be the strategy underlying asset
       const secondaryAsset = new Token(1, outputToken, outputTokenDecimals);
       // We only use V3 protocol for now
-      const protocols = ["V3"] as Protocol[];
-      if (!primaryAsset || !secondaryAsset)
-        throw new Error("Please enter a valid asset");
+      const protocols = ['V3'] as Protocol[];
+      if (!primaryAsset || !secondaryAsset) {
+        throw new Error('Please enter a valid asset');
+      }
       const amountBN = parseUnits(amount, inputTokenDecimals).toString();
       // We retrieve the route from the uniswap router
       const route: SwapRoute | null = await this.router.route(
-        CurrencyAmount.fromRawAmount(primaryAsset, amountBN),
-        secondaryAsset,
-        TradeType.EXACT_INPUT,
-        undefined,
-        { protocols }
+          CurrencyAmount.fromRawAmount(primaryAsset, amountBN),
+          secondaryAsset,
+          TradeType.EXACT_INPUT,
+          undefined,
+          {protocols},
       );
-      const { pools, tokenPath, swapOutputAmount } = this.mapRouteData(route);
+      const {pools, tokenPath, swapOutputAmount} = this.mapRouteData(route);
 
       const timestamp = Math.floor(Date.now() / 1000);
       const encodedPath = this.buildPathFromUniswapRouteDataAndEncode(
-        pools,
-        tokenPath
+          pools,
+          tokenPath,
       );
       const deadline = BigInt(timestamp + 1000);
       const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
       const swapOutputAmountBN = parseUnits(
-        swapOutputAmount,
-        outputTokenDecimals
+          swapOutputAmount,
+          outputTokenDecimals,
       );
       const swapOutputAmountBNWithSlippage =
         (swapOutputAmountBN * slippagePercentageBN) / BigInt(10000);
       const payload = this.buildPayload(
-        encodedPath,
-        deadline,
-        swapOutputAmountBNWithSlippage
+          encodedPath,
+          deadline,
+          swapOutputAmountBNWithSlippage,
       );
-      return { swapOutputAmount: swapOutputAmountBNWithSlippage, payload };
+      return {swapOutputAmount: swapOutputAmountBNWithSlippage, payload};
     } catch (err) {
-      console.log("fetchUniswapRoute err: ", err);
+      console.log('fetchUniswapRoute err: ', err);
       throw err;
     }
   };
@@ -104,9 +105,9 @@ export class UniswapService {
     for (let i = 0; i < pools.length; i++) {
       const currentPool: Pool = pools[i];
       if (i === 0) {
-        dataTypes.push("address", "uint24", "address");
+        dataTypes.push('address', 'uint24', 'address');
       } else {
-        dataTypes.push("uint24", "address");
+        dataTypes.push('uint24', 'address');
       }
       dataValues.splice(feeIndex, 0, currentPool.fee.toString());
       feeIndex += 2;
@@ -121,46 +122,46 @@ export class UniswapService {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mapRouteData = (route: any) => {
-    if (!route) throw new Error("Please enter a valid route");
+    if (!route) throw new Error('Please enter a valid route');
     const pools = route.route[0].route.pools;
     const tokenPath = route.route[0].route.tokenPath;
     const swapOutputAmount = route.quote.toExact() || 0;
-    return { pools, tokenPath, swapOutputAmount };
+    return {pools, tokenPath, swapOutputAmount};
   };
 
   buildPayload = (
-    encodedPath: `0x${string}`,
-    deadline: bigint,
-    swapOutputAmount: bigint
+      encodedPath: `0x${string}`,
+      deadline: bigint,
+      swapOutputAmount: bigint,
   ): string => {
     return encodeAbiParameters(
-      [
-        {
-          components: [
-            {
-              name: "path",
-              type: "bytes",
-            },
-            {
-              name: "deadline",
-              type: "uint256",
-            },
-            {
-              name: "amountOutMin",
-              type: "uint256",
-            },
-          ],
-          name: "UniswapV3Data",
-          type: "tuple",
-        },
-      ],
-      [
-        {
-          path: encodedPath,
-          deadline: deadline,
-          amountOutMin: swapOutputAmount,
-        },
-      ]
+        [
+          {
+            components: [
+              {
+                name: 'path',
+                type: 'bytes',
+              },
+              {
+                name: 'deadline',
+                type: 'uint256',
+              },
+              {
+                name: 'amountOutMin',
+                type: 'uint256',
+              },
+            ],
+            name: 'UniswapV3Data',
+            type: 'tuple',
+          },
+        ],
+        [
+          {
+            path: encodedPath,
+            deadline: deadline,
+            amountOutMin: swapOutputAmount,
+          },
+        ],
     );
   };
 }

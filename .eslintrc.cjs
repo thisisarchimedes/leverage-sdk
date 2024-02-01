@@ -1,46 +1,40 @@
 module.exports = {
-  'env': {
-    'es2021': true,
-    'node': true,
+  env: {
+    es2021: true,
+    node: true,
   },
-  'extends': [
+  extends: [
     'eslint:recommended',
     'google',
     'plugin:@typescript-eslint/recommended',
     'plugin:vitest/all',
   ],
-  'overrides': [
+  overrides: [
     {
-      'env': {
-        'node': true,
+      env: {
+        node: true,
       },
-      'files': [
-        '.eslintrc.{js,cjs}',
-      ],
-      'parserOptions': {
-        'sourceType': 'script',
+      files: ['.eslintrc.{js,cjs}'],
+      parserOptions: {
+        sourceType: 'script',
       },
     },
   ],
-  'parser': '@typescript-eslint/parser',
-  'parserOptions': {
-    'ecmaVersion': 'latest',
-    'sourceType': 'module',
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 'latest',
+    sourceType: 'module',
   },
-  'plugins': [
-    '@typescript-eslint',
-    'promise',
-    'vitest',
-  ],
-  'rules': {
+  plugins: ['@typescript-eslint', 'promise', 'vitest'],
+  rules: {
     'complexity': ['error', 6],
     'require-await': 'error',
-    'max-len': ['error', {'code': 120}],
+    'max-len': ['error', {code: 120}],
     'require-jsdoc': 'off',
     'vitest/max-expects': [
       'error',
       {
-        'max': 3,
+        max: 3,
       },
     ],
     'vitest/prefer-expect-assertions': 'error',
