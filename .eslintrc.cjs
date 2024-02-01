@@ -7,7 +7,7 @@ module.exports = {
     'eslint:recommended',
     'google',
     'plugin:@typescript-eslint/recommended',
-    'plugin:mocha/recommended',
+    'plugin:vitest/all',
   ],
   'overrides': [
     {
@@ -30,11 +30,20 @@ module.exports = {
   'plugins': [
     '@typescript-eslint',
     'promise',
-    'mocha',
+    'vitest',
   ],
   'rules': {
+    'complexity': ['error', 6],
     'require-await': 'error',
-    'max-len': ['error', {'code': 140}],
+    'max-len': ['error', {'code': 120}],
     'require-jsdoc': 'off',
+    'vitest/max-expects': [
+      'error',
+      {
+        'max': 3,
+      },
+    ],
+    'vitest/prefer-expect-assertions': 'error',
+    'vitest/expect-expect': 'error',
   },
 };

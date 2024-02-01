@@ -45,7 +45,7 @@ jobs:
         run: npm install
 
       - name: Lint Code
-        run: npx eslint . --ext .js,.jsx,.ts,.tsx --ignore-pattern /devops/  
+        run: npx eslint . --ext .js,.jsx,.ts,.tsx -c .eslintrc.cjs --ignore-pattern /devops/  
 
       # Build the project
       - name: Build the project
