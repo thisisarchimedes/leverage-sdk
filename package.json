@@ -26,6 +26,7 @@
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-mocha": "^10.2.0",
     "eslint-plugin-promise": "^6.1.1",
+    "react-query": "^3.39.3",
     "ts-node": "^10.9.1",
     "typescript": "^5.3.2",
     "viem": "^1.20.3",
