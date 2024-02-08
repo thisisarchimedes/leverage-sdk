@@ -8,6 +8,7 @@ on:
 env:
   API_DEVOPS_EVENT_CATCHER: ${{ vars.API_DEVOPS_EVENT_CATCHER }}
   DEVOPS_EVENTS_SECRET_TOKEN: ${{ secrets.DEVOPS_EVENTS_SECRET_TOKEN }}
+  PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
 
 jobs:
   test:
@@ -16,12 +17,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: "recursive"
+          submodules: 'recursive'
 
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "latest"
+          node-version: 'latest'
 
       - name: Install dependencies
         run: npm install
@@ -54,11 +55,10 @@ jobs:
 
       - name: Runnig Stryker Mutator JS
         id: mutation_testing
-        run : |  
+        run: |
           #npx stryker run > stryker_log.txt
           #echo "COVERAGE_STRYKER_FUNC=`awk '/^All files/{print $4}' stryker_log.txt`" >> $GITHUB_ENV
           #echo Stryker Mutator score: ${{ env.COVERAGE_STRYKER_FUNC}}
-
 
       - name: Report test run time
         run: |

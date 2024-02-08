@@ -7,6 +7,7 @@ type SimulateContractArgs = {
   args: unknown[];
   account: `0x${string}`;
 };
+
 export class ClientService {
   readonly publicClient: PublicClient;
   readonly walletClient: WalletClient;

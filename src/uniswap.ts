@@ -10,11 +10,7 @@ export class UniswapService {
   readonly router: AlphaRouter;
 
   constructor(client: PublicClient) {
-    if (
-      !client.chain?.rpcUrls?.default ||
-      !client.chain.id ||
-      !client.chain.name
-    ) {
+    if (!client.chain?.rpcUrls?.default || !client.chain.id || !client.chain.name) {
       throw new Error('Please setup the wallet');
     }
     const network = {
@@ -46,7 +42,7 @@ export class UniswapService {
       outputToken: string,
       outputTokenDecimals: number,
       slippagePercentage = '50',
-  ): Promise<{ payload: string; swapOutputAmount: bigint }> => {
+  ): Promise<{payload: string; swapOutputAmount: bigint}> => {
     try {
       // Primary token always will be WBTC for now
       const primaryAsset = new Token(1, inputToken, inputTokenDecimals);
@@ -69,23 +65,12 @@ export class UniswapService {
       const {pools, tokenPath, swapOutputAmount} = this.mapRouteData(route);
 
       const timestamp = Math.floor(Date.now() / 1000);
-      const encodedPath = this.buildPathFromUniswapRouteDataAndEncode(
-          pools,
-          tokenPath,
-      );
+      const encodedPath = this.buildPathFromUniswapRouteDataAndEncode(pools, tokenPath);
       const deadline = BigInt(timestamp + 1000);
       const slippagePercentageBN = BigInt(10000 - Number(slippagePercentage));
-      const swapOutputAmountBN = parseUnits(
-          swapOutputAmount,
-          outputTokenDecimals,
-      );
-      const swapOutputAmountBNWithSlippage =
-        (swapOutputAmountBN * slippagePercentageBN) / BigInt(10000);
-      const payload = this.buildPayload(
-          encodedPath,
-          deadline,
-          swapOutputAmountBNWithSlippage,
-      );
+      const swapOutputAmountBN = parseUnits(swapOutputAmount, outputTokenDecimals);
+      const swapOutputAmountBNWithSlippage = (swapOutputAmountBN * slippagePercentageBN) / BigInt(10000);
+      const payload = this.buildPayload(encodedPath, deadline, swapOutputAmountBNWithSlippage);
       return {swapOutputAmount: swapOutputAmountBNWithSlippage, payload};
     } catch (err) {
       console.log('fetchUniswapRoute err: ', err);
@@ -129,11 +114,7 @@ export class UniswapService {
     return {pools, tokenPath, swapOutputAmount};
   };
 
-  buildPayload = (
-      encodedPath: `0x${string}`,
-      deadline: bigint,
-      swapOutputAmount: bigint,
-  ): string => {
+  buildPayload = (encodedPath: `0x${string}`, deadline: bigint, swapOutputAmount: bigint): string => {
     return encodeAbiParameters(
         [
           {

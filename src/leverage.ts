@@ -95,9 +95,8 @@ export class LeverageActions {
       account: `0x${string}`,
   ) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const {strategyAsset: assetOut, assetDecimals: assetOutDecimals} = await this.getOutputAssetFromStrategy(
-        strategyAddress,
-    );
+    const {strategyAsset: assetOut, assetDecimals: assetOutDecimals} =
+      await this.getOutputAssetFromStrategy(strategyAddress);
 
     const leverageAddresses = await getLeverageAddresses(this.clientService.getChainId());
 
@@ -152,9 +151,8 @@ export class LeverageActions {
     if (Number(slippagePercentage) > 10000) {
       throw new Error('Slippage percentage cannot be greater than 10000');
     }
-    const {strategyAsset: assetOut, assetDecimals: assetOutDecimals} = await this.getOutputAssetFromStrategy(
-        strategyAddress,
-    );
+    const {strategyAsset: assetOut, assetDecimals: assetOutDecimals} =
+      await this.getOutputAssetFromStrategy(strategyAddress);
     const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
     const {payload, swapOutputAmount} = await this.uniswapService.fetchUniswapRouteAndBuildPayload(
         totalAmount,
