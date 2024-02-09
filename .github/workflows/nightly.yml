@@ -41,6 +41,7 @@ jobs:
           end=$(date +%s)
           duration=$((end-start))
 
+          cat tmp_coverage.txt
           echo "DURATION=$duration" >> $GITHUB_ENV
           echo "Time taken to run the tests: $duration seconds"
 
@@ -59,10 +60,10 @@ jobs:
       - name: Runnig Stryker Mutator JS
         id: mutation_testing
         run : |  
-          #yarn stryker run > stryker_log.txt
-          #cat stryker_log.txt
-          #echo "COVERAGE_STRYKER_FUNC=`awk '/^All files/{print $4}' stryker_log.txt`" >> $GITHUB_ENV
-          #echo Stryker Mutator score: ${{ env.COVERAGE_STRYKER_FUNC}}
+          yarn stryker run > stryker_log.txt
+          cat stryker_log.txt
+          echo "COVERAGE_STRYKER_FUNC=`awk '/^All files/{print $4}' stryker_log.txt`" >> $GITHUB_ENV
+          echo Stryker Mutator score: ${{ env.COVERAGE_STRYKER_FUNC}}
 
       - name: Run lint on tests
         continue-on-error: true
