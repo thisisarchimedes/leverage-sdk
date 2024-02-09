@@ -9,6 +9,7 @@ env:
   API_DEVOPS_EVENT_CATCHER: ${{ vars.API_DEVOPS_EVENT_CATCHER }}
   DEVOPS_EVENTS_SECRET_TOKEN: ${{ secrets.DEVOPS_EVENTS_SECRET_TOKEN }}
   GIT_PAT: ${{ secrets.GIT_PAT }}
+  PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
 
 jobs:
   test:
@@ -21,10 +22,11 @@ jobs:
           ref: ${{ github.event_name == 'schedule' && 'development' || github.ref }}
           token: ${{ secrets.GIT_PAT }}
   
+
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "latest"
+          node-version: 'latest'
 
       - name: Install dependencies
         run: yarn install
@@ -70,3 +72,4 @@ jobs:
           echo "Time taken to run the tests: ${{ env.DURATION }} seconds"
           yarn add install axios dotenv
           node devops/metrics/src/cicd_script/report_devops_event.js ${{ github.repository }} test_run '{"pass": "${{ env.TEST_PASS }}", "time": "${{ env.DURATION }}" ,"coverage": {"functions": "${{ env.COVERAGE_FUNC }}"}, "linter_issues": {"tests": "${{ env. LINT_PROBLEMS }}"}}'
+
