@@ -20,7 +20,6 @@ jobs:
         with:
           submodules: "recursive"
           ref: ${{ github.event_name == 'schedule' && 'development' || github.ref }}
-          token: ${{ secrets.GIT_PAT }}
   
 
       - name: Use Node.js
