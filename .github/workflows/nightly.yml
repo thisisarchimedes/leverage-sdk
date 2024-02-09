@@ -18,14 +18,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: "recursive"
           ref: ${{ github.event_name == 'schedule' && 'development' || github.ref }}
-  
+          submodules: "recursive"
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 'latest'
+          node-version: "latest"
 
       - name: Install dependencies
         run: yarn install
@@ -34,17 +34,19 @@ jobs:
         id: test_suite
         continue-on-error: true
         run: |
-          echo "TEST_START=$(date +%s)" >> $GITHUB_ENV  
+          start=$(date +%s)
 
-          yarn test
+          yarn test > tmp_coverage.txt
 
           end=$(date +%s)
-          duration=$((end-${{ env.TEST_START }}))
+          duration=$((end-start))
 
           echo "DURATION=$duration" >> $GITHUB_ENV
           echo "Time taken to run the tests: $duration seconds"
 
           echo "::set-output name=passed::$?"
+
+          echo "COVERAGE_FUNC=`grep "All files" tmp_coverage.txt | awk '{print $(NF-1)}'`" >> $GITHUB_ENV
 
       - name: Set Test Result Env Variable
         run: |
@@ -54,21 +56,30 @@ jobs:
             echo "TEST_PASS=false" >> $GITHUB_ENV
           fi
 
-      - name: Getting Test Coveragev (TODO)
-        run: |
-          echo "COVERAGE_FUNC=0" >> $GITHUB_ENV
+      - name: Runnig Stryker Mutator JS
+        id: mutation_testing
+        run : |  
+          #yarn stryker run > stryker_log.txt
+          #cat stryker_log.txt
+          #echo "COVERAGE_STRYKER_FUNC=`awk '/^All files/{print $4}' stryker_log.txt`" >> $GITHUB_ENV
+          #echo Stryker Mutator score: ${{ env.COVERAGE_STRYKER_FUNC}}
 
-      - name: Run ESLint on tests
+      - name: Run lint on tests
         continue-on-error: true
         run: |
-          LINT_OUTPUT=`yarn eslint test/ | grep "problems (" | awk '{print $2}'`
-          echo $LINT_OUTPUT
+          LINT_OUTPUT=`yarn eslint -c .eslintrc.cjs test/**/*.ts | grep "problem" | awk '{print $2}'`
+              
+          if [ -z "$LINT_OUTPUT" ]; then
+            LINT_OUTPUT=0
+          fi
+              
           echo "LINT_PROBLEMS=$LINT_OUTPUT" >> $GITHUB_ENV
-          continue-on-error: true
 
-      - name: Report test metrics
+      - name: Report test run time
         run: |
           echo "Time taken to run the tests: ${{ env.DURATION }} seconds"
-          yarn add install axios dotenv
-          node devops/metrics/src/cicd_script/report_devops_event.js ${{ github.repository }} test_run '{"pass": "${{ env.TEST_PASS }}", "time": "${{ env.DURATION }}" ,"coverage": {"functions": "${{ env.COVERAGE_FUNC }}"}, "linter_issues": {"tests": "${{ env. LINT_PROBLEMS }}"}}'
+          npm install axios dotenv
+          node devops/metrics/src/cicd_script/report_devops_event.js ${{ github.repository }} test_run '{"pass": "${{ env.TEST_PASS }}", "time": "${{ env.DURATION }}" ,"coverage": {"functions": "${{ env.COVERAGE_FUNC }}"}, "functions_stryker": "${{ env.COVERAGE_STRYKER_FUNC }}", "linter_issues": {"tests": "${{ env. LINT_PROBLEMS }}"}}'
+
+          
 

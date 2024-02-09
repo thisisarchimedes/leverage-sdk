@@ -12,14 +12,14 @@
     "build/**/*.json"
   ],
   "scripts": {
-    "test": "vitest",
+    "test": "vitest --coverage.enabled --coverage.provider=istanbul --coverage.all --coverage.reporter=lcov --coverage.reporter=text",
     "build": "rm -rf ./build && npx tsc"
   },
   "repository": "git@github.com:thisisarchimedes/leverage-sdk.git",
   "author": "dev@archimedesfi.com",
   "license": "MIT",
   "devDependencies": {
-    "@stryker-mutator/core": "^8.0.0",
+    "@stryker-mutator/core": "^8.2.3",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
     "dotenv": "^16.3.1",
@@ -39,7 +39,8 @@
     "axios": "^1.6.2",
     "eslint": "^8.56.0",
     "eslint-plugin-vitest": "^0.3.21",
-    "ethers": "5.7.2"
+    "ethers": "5.7.2",
+    "nyc": "^15.1.0"
   },
   "peerDependencies": {
     "react": "^18.2.0",
