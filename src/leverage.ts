@@ -321,7 +321,7 @@ export class LeverageActions {
         expiredVault.address,
         expiredVault.abi,
         'claim',
-        [nftId],
+        ['1'],
         account,
     );
     if (!request) return 'No request found';
