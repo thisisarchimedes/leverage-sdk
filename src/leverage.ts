@@ -313,7 +313,7 @@ export class LeverageActions {
    * @param account wallet address of the user
    * @return {Object} result and transaction receipt
    */
-  claimTokensBack = async (nftId: string, account: `0x${string}`) => {
+  claimTokensBack = async (nftId: bigint, account: `0x${string}`) => {
     const leverageAddresses = await getLeverageAddresses(this.clientService.getChainId());
     const expiredVault = leverageAddresses.find((item: LeverageAddressesResponse) => item.name === 'ExpiredVault');
     if (!expiredVault) throw new Error('No expired vault found');
