@@ -318,11 +318,14 @@ export class LeverageActions {
     const expiredVault = leverageAddresses.find((item: LeverageAddressesResponse) => item.name === 'ExpiredVault');
     if (!expiredVault) throw new Error('No expired vault found');
 
-    const expiredVaultContract = this.clientService.getContract(expiredVault.address, expiredVault.abi);
     const account = this.clientService.getAccount().address;
-    const {request, result} = await expiredVaultContract.simulate.claim([nftId], {
-      account: account,
-    });
+    const {request, result} = await this.clientService.simulateContract(
+        expiredVault.address,
+        expiredVault.abi,
+        'claim',
+        [nftId],
+        account,
+    );
 
     if (!request) return 'No request found';
     const hash = await this.clientService.writeContract(request);
