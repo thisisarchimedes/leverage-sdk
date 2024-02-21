@@ -9,7 +9,7 @@ export const LEVERAGE_ADDRESSES_URL: {
   1337: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/tenderly_fork_leverage_abis.json',
   11: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/demo_leverage_abis.json',
   12: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/stable_leverage_abis.json',
-  31337: 'https://smart-contract-backend-config.s3.us-east-1.amazonaws.com/abis/oleg_test_fork_leverage_abis.json',
+  31337: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/oleg_test_fork_leverage_addresses.json',
 };
 
 export const USDC = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
