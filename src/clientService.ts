@@ -1,4 +1,4 @@
-import {Abi, PublicClient, WalletClient} from 'viem';
+import {Abi, PublicClient, WalletClient, getContract} from 'viem';
 
 type SimulateContractArgs = {
   address: `0x${string}`;
@@ -62,5 +62,20 @@ export class ClientService {
   // eslint-disable-next-line
   writeContract = async (request: any) => {
     return await this.walletClient.writeContract(request);
+  };
+
+  getContract = (address: `0x${string}`, abi: Abi) => {
+    return getContract({
+      address: address,
+      abi: abi,
+      client: {public: this.publicClient, wallet: this.walletClient},
+    });
+  };
+
+  getAccount = () => {
+    if (this.walletClient.account === undefined) {
+      throw new Error('Please setup the wallet');
+    }
+    return this.walletClient.account;
   };
 }
