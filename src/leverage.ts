@@ -166,6 +166,7 @@ export class LeverageActions {
         'previewDeposit',
         [swapOutputAmount],
       )) as bigint;
+      minimumExpectedShares = (minimumExpectedShares * BigInt(10000 - Number(slippagePercentage))) / BigInt(10000);
     } else {
       const {payload: payloadRes, swapOutputAmount} = await this.uniswapService.fetchUniswapRouteAndBuildPayload(
           totalAmount,
@@ -182,7 +183,6 @@ export class LeverageActions {
         'previewDeposit',
         [swapOutputAmount],
       )) as bigint;
-      minimumExpectedShares = (minimumExpectedShares * BigInt(10000 - Number(slippagePercentage))) / BigInt(10000);
     }
 
     return {
