@@ -5,7 +5,7 @@ export const BLOCKS_PER_MINUTE = 4.3;
 export const LEVERAGE_ADDRESSES_URL: {
   [key: number]: string;
 } = {
-  1: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/tenderly_fork_leverage_abis.json',
+  1: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/stable_leverage_abis.json',
   1337: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/tenderly_fork_leverage_abis.json',
   11: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/demo_leverage_abis.json',
   12: 'https://smart-contract-backend-config.s3.amazonaws.com/abis/stable_leverage_abis.json',
