@@ -182,6 +182,7 @@ export class LeverageActions {
         'previewDeposit',
         [swapOutputAmount],
       )) as bigint;
+      minimumExpectedShares = (minimumExpectedShares * BigInt(10000 - Number(slippagePercentage))) / BigInt(10000);
     }
 
     return {
