@@ -254,7 +254,7 @@ export class LeverageActions {
       MULTIPOOL_STRATEGY_ABI as Abi,
       'asset',
     )) as `0x${string}`;
-
+    if (strategyAsset === WBTC) return {minimumWBTC: formatUnits(minimumExpectedAssets, WBTC_DECIMALS), payload: ''};
     const assetDecimals = (await this.clientService.readContract(
         strategyAsset,
       ERC20_ABI as Abi,
