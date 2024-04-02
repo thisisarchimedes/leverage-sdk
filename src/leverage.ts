@@ -156,21 +156,33 @@ export class LeverageActions {
         strategyAddress,
     );
     const totalAmount = (Number(amount) + Number(amountToBorrow)).toString();
-    const {payload, swapOutputAmount} = await this.uniswapService.fetchUniswapRouteAndBuildPayload(
-        totalAmount,
-        WBTC,
-        WBTC_DECIMALS,
-        assetOut,
-        assetOutDecimals,
-        slippagePercentage,
-    );
-
-    const minimumExpectedShares: bigint = (await this.clientService.readContract(
-        strategyAddress,
-      MULTIPOOL_STRATEGY_ABI as Abi,
-      'previewDeposit',
-      [swapOutputAmount],
-    )) as bigint;
+    let payload = '';
+    let minimumExpectedShares: bigint = BigInt(0);
+    if (assetOut === WBTC) {
+      const swapOutputAmount = parseUnits(totalAmount, WBTC_DECIMALS);
+      minimumExpectedShares = (await this.clientService.readContract(
+          strategyAddress,
+        MULTIPOOL_STRATEGY_ABI as Abi,
+        'previewDeposit',
+        [swapOutputAmount],
+      )) as bigint;
+    } else {
+      const {payload: payloadRes, swapOutputAmount} = await this.uniswapService.fetchUniswapRouteAndBuildPayload(
+          totalAmount,
+          WBTC,
+          WBTC_DECIMALS,
+          assetOut,
+          assetOutDecimals,
+          slippagePercentage,
+      );
+      payload = payloadRes;
+      minimumExpectedShares = (await this.clientService.readContract(
+          strategyAddress,
+        MULTIPOOL_STRATEGY_ABI as Abi,
+        'previewDeposit',
+        [swapOutputAmount],
+      )) as bigint;
+    }
 
     return {
       minimumExpectedShares: formatUnits(minimumExpectedShares, assetOutDecimals),
