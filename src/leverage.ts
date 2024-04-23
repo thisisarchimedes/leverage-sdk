@@ -237,13 +237,24 @@ export class LeverageActions {
   previewClosePosition = async (nftId: string, slippagePercentage = '50') => {
     const leverageAddresses = await getLeverageAddresses(this.clientService.getChainId());
     const positionLedger = leverageAddresses.find((item: LeverageAddressesResponse) => item.name === 'PositionLedger');
+    const protocolParameters = leverageAddresses.find(
+        (item: LeverageAddressesResponse) => item.name === 'ProtocolParameters',
+    );
     if (!positionLedger) throw new Error('No position ledger found');
+    if (!protocolParameters) throw new Error('No protocol parameters found');
+    const exitFee = (await this.clientService.readContract(
+        protocolParameters.address,
+        protocolParameters.abi,
+        'getExitFee',
+    )) as bigint;
+
     const positionData: LedgerEntry = (await this.clientService.readContract(
         positionLedger.address,
         positionLedger.abi,
         'getPosition',
         [nftId],
     )) as unknown as LedgerEntry;
+
     const minimumExpectedAssets = (await this.clientService.readContract(
         positionData.strategyAddress,
       MULTIPOOL_STRATEGY_ABI as Abi,
@@ -255,7 +266,13 @@ export class LeverageActions {
       MULTIPOOL_STRATEGY_ABI as Abi,
       'asset',
     )) as `0x${string}`;
-    if (strategyAsset === WBTC) return {minimumWBTC: formatUnits(minimumExpectedAssets, WBTC_DECIMALS), payload: ''};
+    if (strategyAsset === WBTC) {
+      const exitFeeAmoubt = (minimumExpectedAssets - positionData.wbtcDebtAmount * exitFee) / BigInt(10000);
+      const minimumExpectedAssetsAfterExitFeeAndDebt =
+        minimumExpectedAssets - positionData.wbtcDebtAmount - exitFeeAmoubt;
+
+      return {minimumWBTC: formatUnits(minimumExpectedAssetsAfterExitFeeAndDebt, WBTC_DECIMALS), payload: ''};
+    }
     const assetDecimals = (await this.clientService.readContract(
         strategyAsset,
       ERC20_ABI as Abi,
@@ -270,9 +287,10 @@ export class LeverageActions {
         WBTC_DECIMALS,
         slippagePercentage,
     );
-
+    const exitFeeAmoubt = (minimumWBTC - positionData.wbtcDebtAmount * exitFee) / BigInt(10000);
+    const minimumExpectedAssetsAfterExitFeeAndDebt = minimumWBTC - positionData.wbtcDebtAmount - exitFeeAmoubt;
     return {
-      minimumWBTC: formatUnits(minimumWBTC, WBTC_DECIMALS),
+      minimumWBTC: formatUnits(minimumExpectedAssetsAfterExitFeeAndDebt, WBTC_DECIMALS),
       payload,
     };
   };
