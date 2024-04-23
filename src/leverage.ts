@@ -267,10 +267,15 @@ export class LeverageActions {
       'asset',
     )) as `0x${string}`;
     if (strategyAsset === WBTC) {
-      const exitFeeAmoubt = (minimumExpectedAssets - positionData.wbtcDebtAmount * exitFee) / BigInt(10000);
+      const minimumExpectedAssetsWithSlippage =
+        (minimumExpectedAssets * BigInt(10000 - Number(slippagePercentage))) / BigInt(10000);
+      const exitFeeAmount =
+        ((minimumExpectedAssetsWithSlippage - positionData.wbtcDebtAmount) * exitFee) / BigInt(10000);
       const minimumExpectedAssetsAfterExitFeeAndDebt =
-        minimumExpectedAssets - positionData.wbtcDebtAmount - exitFeeAmoubt;
-
+        minimumExpectedAssetsWithSlippage - positionData.wbtcDebtAmount - exitFeeAmount;
+      if (minimumExpectedAssetsAfterExitFeeAndDebt < BigInt(0)) {
+        throw new Error('Insufficient funds to close position');
+      }
       return {minimumWBTC: formatUnits(minimumExpectedAssetsAfterExitFeeAndDebt, WBTC_DECIMALS), payload: ''};
     }
     const assetDecimals = (await this.clientService.readContract(
