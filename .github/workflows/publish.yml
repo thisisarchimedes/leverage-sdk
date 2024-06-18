@@ -93,8 +93,10 @@ jobs:
           if [ -n "${{ env.NEW_VERSION }}" ]; then
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
+            git fetch origin main
+            git rebase origin/main
             git tag v${{ env.NEW_VERSION }}
-            git push origin HEAD:main --tags
+            git push origin main --tags
           else
             echo "Error: NEW_VERSION is not set. Skipping tag creation."
             exit 1
