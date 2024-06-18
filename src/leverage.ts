@@ -294,7 +294,7 @@ export class LeverageActions {
     );
     const exitFeeAmoubt = (minimumWBTC - positionData.wbtcDebtAmount * exitFee) / BigInt(10000);
     const minimumExpectedAssetsAfterExitFeeAndDebt = minimumWBTC - positionData.wbtcDebtAmount - exitFeeAmoubt;
-    console.log('test', {minimumExpectedAssetsAfterExitFeeAndDebt, payload, minimumWBTC});
+    console.log('test again', {minimumExpectedAssetsAfterExitFeeAndDebt, payload, minimumWBTC});
     return {
       minimumWBTC: formatUnits(minimumExpectedAssetsAfterExitFeeAndDebt, WBTC_DECIMALS),
       payload,
